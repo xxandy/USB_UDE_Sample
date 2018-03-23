@@ -1,0 +1,79 @@
+;
+; UDEFX2.inf
+;
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=USB
+ClassGuid={36FC9E60-C465-11CF-8056-444553540000} ; used for all usb devices
+Provider=%ManufacturerName%
+CatalogFile=UDEFX2.cat
+DriverVer=
+
+[DestinationDirs]
+DefaultDestDir = 12
+UDEFX2_Device_CoInstaller_CopyFiles = 11
+
+; ================= Class section =====================
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+UDEFX2.sys  = 1,,
+WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll=1 ; make sure the number matches with SourceDisksNames
+
+;*****************************************
+; Install Section
+;*****************************************
+
+[Manufacturer]
+%ManufacturerName%=Standard,NT$ARCH$
+
+[Standard.NT$ARCH$]
+%UDEFX2.DeviceDesc%=UDEFX2_Device, Root\UDEFX2
+
+[UDEFX2_Device.NT]
+CopyFiles=Drivers_Dir
+
+[Drivers_Dir]
+UDEFX2.sys
+
+;-------------- Service installation
+[UDEFX2_Device.NT.Services]
+AddService = UDEFX2,%SPSVCINST_ASSOCSERVICE%, UDEFX2_Service_Inst
+
+; -------------- UDEFX2 driver install sections
+[UDEFX2_Service_Inst]
+DisplayName    = %UDEFX2.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\UDEFX2.sys
+
+;
+;--- UDEFX2_Device Coinstaller installation ------
+;
+
+[UDEFX2_Device.NT.CoInstallers]
+AddReg=UDEFX2_Device_CoInstaller_AddReg
+CopyFiles=UDEFX2_Device_CoInstaller_CopyFiles
+
+[UDEFX2_Device_CoInstaller_AddReg]
+HKR,,CoInstallers32,0x00010000, "WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll,WdfCoInstaller"
+
+[UDEFX2_Device_CoInstaller_CopyFiles]
+WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll
+
+[UDEFX2_Device.NT.Wdf]
+KmdfService =  UDEFX2, UDEFX2_wdfsect
+[UDEFX2_wdfsect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+[Strings]
+SPSVCINST_ASSOCSERVICE= 0x00000002
+ManufacturerName="SurfaceBiz Education"
+ClassName="VirtualFX2"
+DiskName = "UDEFX2 Installation Disk"
+UDEFX2.DeviceDesc = "UDEFX2 Device"
+UDEFX2.SVCDESC = "UDEFX2 Service"
