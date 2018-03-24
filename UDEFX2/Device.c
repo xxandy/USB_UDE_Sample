@@ -513,15 +513,18 @@ ControllerWdfEvtCleanupCallback(
 	WDFOBJECT   WdfDevice
 )
 {
-	PIO_CONTEXT ioContext;
+	//PIO_CONTEXT ioContext;
+	UNREFERENCED_PARAMETER(WdfDevice);
 	FuncEntry(TRACE_DEVICE);
 
+	/*
 	ioContext = WdfDeviceGetIoContext((WDFDEVICE)WdfDevice);
 
 	WdfSpinLockAcquire(ioContext->InProgressLock);
 	MbbCleanupBufferQueue(&ioContext->AvailableInterrupt);
 	MbbCleanupBufferQueue(&ioContext->EncapsulatedCommandResponse);
 	WdfSpinLockRelease(ioContext->InProgressLock);
+	*/
 
 	// TNEXT
 	// Usb_Destroy((WDFDEVICE)WdfDevice);
