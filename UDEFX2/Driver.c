@@ -76,6 +76,7 @@ Return Value:
     WDF_DRIVER_CONFIG_INIT(&config,
                            UDEFX2EvtDeviceAdd
                            );
+	config.DriverPoolTag = UDEFX_POOL_TAG;
 
     status = WdfDriverCreate(DriverObject,
                              RegistryPath,

@@ -27,6 +27,10 @@ Environment:
 #include "queue.h"
 #include "trace.h"
 
+
+#define UDEFX_POOL_TAG 'UDEX'
+
+
 EXTERN_C_START
 
 //
