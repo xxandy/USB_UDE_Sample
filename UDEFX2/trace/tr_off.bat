@@ -1,2 +1,2 @@
-tracelog -flush Kahuna -f v:\usbt\kk.etl
+tracelog -flush Kahuna -f \\VBOXSVR\vmshare\usbt\kk.etl
 tracelog -stop Kahuna

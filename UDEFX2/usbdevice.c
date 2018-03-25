@@ -203,12 +203,63 @@ IoEvtBulkOutUrb(
     _In_ ULONG IoControlCode
 )
 {
+    NTSTATUS status = STATUS_SUCCESS;
+    PUCHAR transferBuffer;
+    ULONG transferBufferLength;
+
     UNREFERENCED_PARAMETER(Request);
     UNREFERENCED_PARAMETER(Queue);
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
 
-    LogError(TRACE_DEVICE, "bulk out code is %x", IoControlCode);
+
+    if (IoControlCode == IOCTL_INTERNAL_USB_SUBMIT_URB)
+    {
+        PULONG pCheck;
+        ULONG numLongs;
+        ULONG j;
+        status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
+        if (!NT_SUCCESS(status))
+        {
+            LogError(TRACE_DEVICE, "WdfRequest %p unable to retrieve buffer %!STATUS!",
+                Request, status);
+            goto exit;
+        }
+
+        LogInfo(TRACE_DEVICE, "ubx CODE %x, [outbuf=%d inbuf=%d], trlen=%d",
+            IoControlCode,
+            (ULONG)(OutputBufferLength),
+            (ULONG)(InputBufferLength),
+            transferBufferLength
+        );
+
+
+        pCheck = (PULONG)transferBuffer;
+        numLongs = transferBufferLength / sizeof(ULONG);
+
+        // check the data with the algorithm used by the test app
+        for (j = 0; j < numLongs; j++, pCheck++ )
+        {
+            if ( (*(pCheck)) == j)
+            {
+                LogInfo(TRACE_DEVICE, "Long %d OK", j);
+            }
+            else
+            {
+                LogInfo(TRACE_DEVICE, "Long %d MISMATCH, was %x", j, (*(pCheck)) );
+            }
+        }
+
+        UdecxUrbSetBytesCompleted(Request, transferBufferLength);
+    }
+    else
+    {
+        LogError(TRACE_DEVICE, "Invalid Bulk out IOCTL code %x", IoControlCode);
+        status = STATUS_ACCESS_DENIED;
+    }
+
+exit:
+    UdecxUrbCompleteWithNtStatus(Request, status);
     return;
 }
 

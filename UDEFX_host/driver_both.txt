@@ -1,0 +1,5 @@
+@rem first this one, before plugging in
+devcon.exe install osrusbfx2.inf "USB\VID_0547&PID_1002"
+
+@rem then this one, which brings the device into existence
+devcon.exe install UDEFX2.inf Root\UDEFX2

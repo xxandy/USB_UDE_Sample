@@ -88,17 +88,11 @@ typedef struct _DEVICE_CONTEXT {
 
     WDFUSBINTERFACE                 UsbInterface;
 
-    WDFUSBPIPE                      BulkReadPipe;
-
     WDFUSBPIPE                      BulkWritePipe;
-
-    WDFUSBPIPE                      InterruptPipe;
 
     WDFWAITLOCK                     ResetDeviceWaitLock;
 
     UCHAR                           CurrentSwitchState;
-
-    WDFQUEUE                        InterruptMsgQueue;
 
     ULONG                           UsbDeviceTraits;
 
@@ -161,8 +155,6 @@ EVT_WDF_IO_QUEUE_IO_WRITE OsrFxEvtIoWrite;
 
 EVT_WDF_IO_QUEUE_IO_DEVICE_CONTROL OsrFxEvtIoDeviceControl;
 
-EVT_WDF_REQUEST_COMPLETION_ROUTINE EvtRequestReadCompletionRoutine;
-
 EVT_WDF_REQUEST_COMPLETION_ROUTINE EvtRequestWriteCompletionRoutine;
 
 _IRQL_requires_(PASSIVE_LEVEL)
@@ -198,53 +190,12 @@ GetBarGraphState(
 
 _IRQL_requires_(PASSIVE_LEVEL)
 NTSTATUS
-SetBarGraphState(
-    _In_ PDEVICE_CONTEXT DevContext,
-    _In_ PBAR_GRAPH_STATE BarGraphState
-    );
-
-_IRQL_requires_(PASSIVE_LEVEL)
-NTSTATUS
-GetSevenSegmentState(
-    _In_ PDEVICE_CONTEXT DevContext,
-    _Out_ PUCHAR SevenSegment
-    );
-
-_IRQL_requires_(PASSIVE_LEVEL)
-NTSTATUS
-SetSevenSegmentState(
-    _In_ PDEVICE_CONTEXT DevContext,
-    _In_ PUCHAR SevenSegment
-    );
-
-_IRQL_requires_(PASSIVE_LEVEL)
-NTSTATUS
-GetSwitchState(
-    _In_ PDEVICE_CONTEXT DevContext,
-    _In_ PSWITCH_STATE SwitchState
-    );
-
-VOID
-OsrUsbIoctlGetInterruptMessage(
-    _In_ WDFDEVICE Device,
-    _In_ NTSTATUS ReaderStatus
-    );
-
-_IRQL_requires_(PASSIVE_LEVEL)
-NTSTATUS
 OsrFxSetPowerPolicy(
         _In_ WDFDEVICE Device
     );
 
-_IRQL_requires_(PASSIVE_LEVEL)
-NTSTATUS
-OsrFxConfigContReaderForInterruptEndPoint(
-    _In_ PDEVICE_CONTEXT DeviceContext
-    );
 
-EVT_WDF_USB_READER_COMPLETION_ROUTINE OsrFxEvtUsbInterruptPipeReadComplete;
 
-EVT_WDF_USB_READERS_FAILED OsrFxEvtUsbInterruptReadersFailed;
 
 EVT_WDF_IO_QUEUE_IO_STOP OsrFxEvtIoStop;
 
