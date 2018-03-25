@@ -13,6 +13,7 @@ Abstract:
 #include "Misc.h"
 #include "Driver.h"
 #include "Device.h"
+#include "usbdevice.h"
 
 #include "Misc.tmh"
 

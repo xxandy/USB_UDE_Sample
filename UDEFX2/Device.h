@@ -67,18 +67,6 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(IO_CONTEXT, WdfDeviceGetIoContext);
 
 
 
-typedef struct _USB_CONTEXT {
-
-	PUDECXUSBDEVICE_INIT  UdecxUsbDeviceInit;
-	UDECXUSBDEVICE        UDEFX2Device;
-	UDECXUSBENDPOINT      UDEFX2ControlEndpoint;
-	UDECXUSBENDPOINT      UDEFX2BulkOutEndpoint;
-	ULONG                 MaxBulkInTransfer;
-	USHORT                NTBFormatSetupValue;
-} USB_CONTEXT, *PUSB_CONTEXT;
-
-WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(USB_CONTEXT, WdfDeviceGetUsbContext);
-
 
 
 

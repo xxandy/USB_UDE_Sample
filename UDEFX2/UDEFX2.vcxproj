@@ -42,6 +42,7 @@
     <ClCompile Include="Driver.c" />
     <ClCompile Include="Misc.c" />
     <ClCompile Include="Queue.c" />
+    <ClCompile Include="usbdevice.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Device.h" />
@@ -50,6 +51,7 @@
     <ClInclude Include="Public.h" />
     <ClInclude Include="Queue.h" />
     <ClInclude Include="Trace.h" />
+    <ClInclude Include="usbdevice.h" />
   </ItemGroup>
   <ItemGroup>
     <Inf Include="UDEFX2.inf" />

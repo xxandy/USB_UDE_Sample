@@ -15,7 +15,9 @@ Environment:
 --*/
 
 #include "driver.h"
+#include "usbdevice.h"
 #include "Misc.h"
+
 #include <ntstrsafe.h>
 #include "device.tmh"
 
@@ -207,11 +209,10 @@ Return Value:
 	}
 
 
-	// TNEXT
 	//
 	// Initialize virtual USB device software objects.
 	//
-	//status = Usb_Initialize(wdfDevice);
+	status = Usb_Initialize(wdfDevice);
 
 	if (!NT_SUCCESS(status)) {
 
@@ -420,9 +421,7 @@ ControllerWdfEvtDeviceD0Entry(
 		NT_ASSERT(!pControllerContext->AllowOnlyResetInterrupts);
 		pControllerContext->AllowOnlyResetInterrupts = TRUE;
 
-
-	    // TNEXT
-		// status = Usb_ReadDescriptorsAndPlugIn(WdfDevice);
+		status = Usb_ReadDescriptorsAndPlugIn(WdfDevice);
 
 		if (!NT_SUCCESS(status)) {
 
@@ -476,13 +475,11 @@ ControllerWdfEvtDeviceD0Exit(
 	WDF_POWER_DEVICE_STATE TargetState
 )
 {
-	UNREFERENCED_PARAMETER(WdfDevice); // TNEXT
 	FuncEntry(TRACE_DEVICE);
 
 	if (TargetState == WdfPowerDeviceD3Final)
 	{
-		// TNEXT
-		// Usb_Disconnect(WdfDevice);
+		Usb_Disconnect(WdfDevice);
 	}
 
 	FuncExit(TRACE_DEVICE, 0);
@@ -526,8 +523,7 @@ ControllerWdfEvtCleanupCallback(
 	WdfSpinLockRelease(ioContext->InProgressLock);
 	*/
 
-	// TNEXT
-	// Usb_Destroy((WDFDEVICE)WdfDevice);
+	Usb_Destroy((WDFDEVICE)WdfDevice);
 	FuncExit(TRACE_DEVICE, 0);
 }
 
