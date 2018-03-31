@@ -26,7 +26,8 @@ Environment:
 
 // {573E8C73-0CB4-4471-A1BF-FAB26C31D384}
 DEFINE_GUID(GUID_DEVINTERFACE_OSRUSBFX2, 
-            0x573e8c73, 0xcb4, 0x4471, 0xa1, 0xbf, 0xfa, 0xb2, 0x6c, 0x31, 0xd3, 0x84);
+            0x5ad9d323, 0xc478, 0x4ad2, 0xb6, 0x39, 0x9d, 0x2e, 0xdd, 0xbd, 0x3b, 0x2c );
+
 
 #pragma warning(push)
 #pragma warning(disable:4201)  // nameless struct/union
@@ -37,84 +38,6 @@ DEFINE_GUID(GUID_DEVINTERFACE_OSRUSBFX2,
 //  interface to the driver
 //
 
-//
-// BAR_GRAPH_STATE
-//
-// BAR_GRAPH_STATE is a bit field structure with each
-//  bit corresponding to one of the bar graph on the 
-//  OSRFX2 Development Board
-//
-#include <pshpack1.h>
-typedef struct _BAR_GRAPH_STATE {
-
-    union {
- 
-        struct {
-            //
-            // Individual bars starting from the 
-            //  top of the stack of bars 
-            //
-            // NOTE: There are actually 10 bars, 
-            //  but the very top two do not light
-            //  and are not counted here
-            //
-            UCHAR Bar1 : 1;
-            UCHAR Bar2 : 1;
-            UCHAR Bar3 : 1;
-            UCHAR Bar4 : 1;
-            UCHAR Bar5 : 1;
-            UCHAR Bar6 : 1;
-            UCHAR Bar7 : 1;
-            UCHAR Bar8 : 1;
-        };
-
-        //
-        // The state of all the bar graph as a single
-        // UCHAR
-        //
-        UCHAR BarsAsUChar;
-
-    };
-
-}BAR_GRAPH_STATE, *PBAR_GRAPH_STATE;
-
-//
-// SWITCH_STATE
-//
-// SWITCH_STATE is a bit field structure with each
-//  bit corresponding to one of the switches on the 
-//  OSRFX2 Development Board
-//
-typedef struct _SWITCH_STATE {
-
-    union {
-        struct {
-            //
-            // Individual switches starting from the 
-            //  left of the set of switches
-            //
-            UCHAR Switch1 : 1;
-            UCHAR Switch2 : 1;
-            UCHAR Switch3 : 1;
-            UCHAR Switch4 : 1;
-            UCHAR Switch5 : 1;
-            UCHAR Switch6 : 1;
-            UCHAR Switch7 : 1;
-            UCHAR Switch8 : 1;
-        };
-
-        //
-        // The state of all the switches as a single
-        // UCHAR
-        //
-        UCHAR SwitchesAsUChar;
-
-    };
-
-
-}SWITCH_STATE, *PSWITCH_STATE;
-
-#include <poppack.h>
 
 #pragma warning(pop)
 

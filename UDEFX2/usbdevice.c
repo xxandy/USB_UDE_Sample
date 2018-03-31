@@ -30,8 +30,8 @@ Abstract:
 #define g_BulkInEndpointAddress    0x84
 #define g_InterruptEndpointAddress 0x86
 
-#define UDEFX2_DEVICE_VENDOR_ID  0x47, 0x05 // little endian
-#define UDEFX2_DEVICE_PROD_ID    0x2, 0x10 // little endian
+#define UDEFX2_DEVICE_VENDOR_ID  0x9, 0x12 // little endian
+#define UDEFX2_DEVICE_PROD_ID    0x87, 0x8 // little endian
 
 
 DECLARE_CONST_UNICODE_STRING(g_ManufacturerStringEnUs, L"Microsoft");

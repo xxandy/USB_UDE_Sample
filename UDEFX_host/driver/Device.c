@@ -25,9 +25,7 @@ Environment:
 #include <osrusbfx2.h>
 #include <devpkey.h>
 
-#if defined(EVENT_TRACING)
 #include "device.tmh"
-#endif
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(PAGE, OsrFxEvtDeviceAdd)
@@ -35,7 +33,6 @@ Environment:
 #pragma alloc_text(PAGE, OsrFxEvtDeviceD0Exit)
 #pragma alloc_text(PAGE, SelectInterfaces)
 #pragma alloc_text(PAGE, OsrFxSetPowerPolicy)
-#pragma alloc_text(PAGE, OsrFxReadFdoRegistryKeyValue)
 #pragma alloc_text(PAGE, GetDeviceEventLoggingNames)
 #pragma alloc_text(PAGE, OsrFxValidateConfigurationDescriptor)
 #endif

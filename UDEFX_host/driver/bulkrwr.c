@@ -25,9 +25,7 @@ Environment:
 #include <osrusbfx2.h>
 
 
-#if defined(EVENT_TRACING)
 #include "bulkrwr.tmh"
-#endif
 
 #pragma warning(disable:4267)
 

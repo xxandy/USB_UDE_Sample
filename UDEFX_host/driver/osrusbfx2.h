@@ -181,12 +181,6 @@ ReenumerateDevice(
     _In_ PDEVICE_CONTEXT DevContext
     );
 
-_IRQL_requires_(PASSIVE_LEVEL)
-NTSTATUS
-GetBarGraphState(
-    _In_ PDEVICE_CONTEXT DevContext,
-    _Out_ PBAR_GRAPH_STATE BarGraphState
-    );
 
 _IRQL_requires_(PASSIVE_LEVEL)
 NTSTATUS
@@ -205,19 +199,7 @@ EVT_WDF_DEVICE_D0_EXIT OsrFxEvtDeviceD0Exit;
 
 EVT_WDF_DEVICE_SELF_MANAGED_IO_FLUSH OsrFxEvtDeviceSelfManagedIoFlush;
 
-_IRQL_requires_(PASSIVE_LEVEL)
-BOOLEAN
-OsrFxReadFdoRegistryKeyValue(
-    _In_ PWDFDEVICE_INIT  DeviceInit,
-    _In_ PWCHAR           Name,
-    _Out_ PULONG          Value
-    );
 
-_IRQL_requires_max_(DISPATCH_LEVEL)
-VOID
-OsrFxEnumerateChildren(
-    _In_ WDFDEVICE Device
-    );
 
 _IRQL_requires_(PASSIVE_LEVEL)
 VOID
