@@ -129,6 +129,45 @@ UsbValidateConstants(
 
 
 
+static  NTSTATUS
+Usb_AllocateContext(
+    _In_
+    WDFDEVICE Object
+)
+/*++
+
+Routine Description:
+
+Object context allocation helper
+
+Arguments:
+
+Object - WDF object upon which to allocate the new context
+
+Return value:
+
+NTSTATUS. Could fail on allocation failure or the same context type already exists on the object
+
+--*/
+{
+    NTSTATUS status;
+    WDF_OBJECT_ATTRIBUTES attributes;
+
+    WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, USB_CONTEXT);
+
+    status = WdfObjectAllocateContext(Object, &attributes, NULL);
+
+    if (!NT_SUCCESS(status)) {
+
+        LogError(TRACE_DEVICE, "Unable to allocate new context for WDF object %p", Object);
+        goto exit;
+    }
+
+exit:
+
+    return status;
+}
+
 
 
 
@@ -143,6 +182,30 @@ Usb_Initialize(
     NTSTATUS                                status;
     PUSB_CONTEXT                            usbContext;
     UDECX_USB_DEVICE_STATE_CHANGE_CALLBACKS   callbacks;
+
+
+
+    //
+    // Allocate per-controller private contexts used by other source code modules (I/O,
+    // etc.)
+    //
+    status = Io_AllocateContext(WdfDevice);
+
+    if (!NT_SUCCESS(status)) {
+
+        goto exit;
+    }
+
+
+
+
+
+    status = Usb_AllocateContext(WdfDevice);
+
+    if (!NT_SUCCESS(status)) {
+
+        goto exit;
+    }
 
 
     usbContext = WdfDeviceGetUsbContext(WdfDevice);
@@ -235,6 +298,10 @@ exit:
 
     return status;
 }
+
+
+
+
 
 NTSTATUS
 Usb_ReadDescriptorsAndPlugIn(

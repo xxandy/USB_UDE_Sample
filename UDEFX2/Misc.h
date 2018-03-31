@@ -20,16 +20,6 @@ Abstract:
 
 EXTERN_C_START
 
-NTSTATUS
-Misc_WdfDeviceAllocateIoContext(
-	_In_ WDFDEVICE Object
-);
-
-NTSTATUS
-Misc_WdfDeviceAllocateUsbContext(
-	_In_ WDFDEVICE Object
-);
-
 
 VOID
 MbbCleanupBufferQueue(

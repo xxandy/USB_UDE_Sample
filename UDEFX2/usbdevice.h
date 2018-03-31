@@ -72,12 +72,12 @@ extern const UCHAR g_UsbConfigDescriptorSet[];
 EXTERN_C_START
 
 
-
 NTSTATUS
 Usb_Initialize(
 	_In_
 	WDFDEVICE WdfDevice
 );
+
 
 NTSTATUS
 Usb_ReadDescriptorsAndPlugIn(

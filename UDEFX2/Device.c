@@ -190,23 +190,6 @@ Return Value:
 		goto exit;
 	}
 
-	//
-	// Allocate per-controller private contexts used by other source code modules (I/O,
-	// etc.)
-	//
-	status = Misc_WdfDeviceAllocateIoContext(wdfDevice);
-
-	if (!NT_SUCCESS(status)) {
-
-		goto exit;
-	}
-
-	status = Misc_WdfDeviceAllocateUsbContext(wdfDevice);
-
-	if (!NT_SUCCESS(status)) {
-
-		goto exit;
-	}
 
 
 	//

@@ -23,6 +23,44 @@ Abstract:
 
 
 
+NTSTATUS
+Io_AllocateContext(
+    _In_
+    WDFDEVICE Object
+)
+/*++
+
+Routine Description:
+
+Object context allocation helper
+
+Arguments:
+
+Object - WDF object upon which to allocate the new context
+
+Return value:
+
+NTSTATUS. Could fail on allocation failure or the same context type already exists on the object
+
+--*/
+{
+    NTSTATUS status;
+    WDF_OBJECT_ATTRIBUTES attributes;
+
+    WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, IO_CONTEXT);
+
+    status = WdfObjectAllocateContext(Object, &attributes, NULL);
+
+    if (!NT_SUCCESS(status)) {
+
+        LogError(TRACE_DEVICE, "Unable to allocate new context for WDF object %p", Object);
+        goto exit;
+    }
+
+exit:
+
+    return status;
+}
 
 
 
@@ -63,7 +101,7 @@ IoEvtControlUrb(
         }
 
 
-        LogInfo(TRACE_DEVICE, "v3 control CODE %x, [type=%x dir=%x recip=%x] req=%x [wv = %x wi = %x wlen = %x]",
+        LogInfo(TRACE_DEVICE, "v44 control CODE %x, [type=%x dir=%x recip=%x] req=%x [wv = %x wi = %x wlen = %x]",
             IoControlCode,
             (int)(setupPacket.Packet.bm.Request.Type),
             (int)(setupPacket.Packet.bm.Request.Dir),
@@ -136,7 +174,7 @@ IoEvtBulkOutUrb(
         {
             if ((*(pCheck)) == j)
             {
-                LogInfo(TRACE_DEVICE, "v3 Long %d OK", j);
+                LogInfo(TRACE_DEVICE, "v44 Long %d OK", j);
             }
             else
             {
