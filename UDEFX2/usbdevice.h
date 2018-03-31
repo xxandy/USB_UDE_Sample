@@ -54,8 +54,6 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(UDECX_USBDEVICE_CONTEXT, UdecxDeviceGetContex
 #define g_ManufacturerIndex   1
 #define g_ProductIndex        2
 #define g_BulkOutEndpointAddress 2
-#define g_BulkInEndpointAddress    0x84
-#define g_InterruptEndpointAddress 0x86
 
 #define UDEFX2_DEVICE_VENDOR_ID  0x9, 0x12 // little endian
 #define UDEFX2_DEVICE_PROD_ID    0x87, 0x8 // little endian
