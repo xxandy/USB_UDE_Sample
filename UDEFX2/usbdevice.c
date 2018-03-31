@@ -14,6 +14,7 @@ Abstract:
 #include "Driver.h"
 #include "Device.h"
 #include "usbdevice.h"
+#include "USBCom.h"
 #include "ucx/1.4/ucxobjects.h"
 #include "usbdevice.tmh"
 
@@ -23,15 +24,7 @@ Abstract:
 
 
 
-// ------------------ descriptor -------------------------------
-#define g_ManufacturerIndex   1
-#define g_ProductIndex        2
-#define g_BulkOutEndpointAddress 2
-#define g_BulkInEndpointAddress    0x84
-#define g_InterruptEndpointAddress 0x86
-
-#define UDEFX2_DEVICE_VENDOR_ID  0x9, 0x12 // little endian
-#define UDEFX2_DEVICE_PROD_ID    0x87, 0x8 // little endian
+// START ------------------ descriptor -------------------------------
 
 
 DECLARE_CONST_UNICODE_STRING(g_ManufacturerStringEnUs, L"Microsoft");
@@ -86,13 +79,13 @@ const UCHAR g_UsbConfigDescriptorSet[] =
         0x00,                                     // bInterfaceProtocol
         0x00,                                     // iInterface
 
-            // Bulk Out Endpoint descriptor
-            0x07,                           // Descriptor size
-            USB_ENDPOINT_DESCRIPTOR_TYPE,   // bDescriptorType
-            g_BulkOutEndpointAddress,       // bEndpointAddress
-            0x02,                           // bmAttributes - bulk
-            0x00, 0x2,                      // wMaxPacketSize
-            0x00                            // bInterval
+        // Bulk Out Endpoint descriptor
+        0x07,                           // Descriptor size
+        USB_ENDPOINT_DESCRIPTOR_TYPE,   // bDescriptorType
+        g_BulkOutEndpointAddress,       // bEndpointAddress
+        USB_ENDPOINT_TYPE_BULK,         // bmAttributes - bulk
+        0x00, 0x2,                      // wMaxPacketSize
+        0x00                            // bInterval
 };
 
 
@@ -131,246 +124,7 @@ UsbValidateConstants(
 }
 
 
-// ------------------ descriptor -------------------------------
-
-
-
-
-
-// IO --------------------------------------
-
-static VOID
-IoEvtControlUrb(
-    _In_ WDFQUEUE Queue,
-    _In_ WDFREQUEST Request,
-    _In_ size_t OutputBufferLength,
-    _In_ size_t InputBufferLength,
-    _In_ ULONG IoControlCode
-)
-{
-    WDF_USB_CONTROL_SETUP_PACKET setupPacket;
-    NTSTATUS status;
-    UNREFERENCED_PARAMETER(Queue);
-    UNREFERENCED_PARAMETER(OutputBufferLength);
-    UNREFERENCED_PARAMETER(InputBufferLength);
-
-    //NT_VERIFY(IoControlCode == IOCTL_INTERNAL_USB_SUBMIT_URB);
-
-    if (IoControlCode == IOCTL_INTERNAL_USB_SUBMIT_URB)
-    {
-        status = UdecxUrbRetrieveControlSetupPacket(Request, &setupPacket);
-
-        if (!NT_SUCCESS(status))
-        {
-            LogError(TRACE_DEVICE, "WdfRequest %p is not a control URB? UdecxUrbRetrieveControlSetupPacket %!STATUS!",
-                Request, status);
-            UdecxUrbCompleteWithNtStatus(Request, status);
-            goto exit;
-        }
-
-
-        LogInfo(TRACE_DEVICE, "control CODE %x, [type=%x dir=%x recip=%x] req=%x [wv = %x wi = %x wlen = %x]",
-            IoControlCode,
-            (int)(setupPacket.Packet.bm.Request.Type),
-            (int)(setupPacket.Packet.bm.Request.Dir),
-            (int)(setupPacket.Packet.bm.Request.Recipient),
-            (int)(setupPacket.Packet.bRequest),
-            (int)(setupPacket.Packet.wValue.Value),
-            (int)(setupPacket.Packet.wIndex.Value),
-            (int)(setupPacket.Packet.wLength )
-        );
-
-
-
-
-        UdecxUrbCompleteWithNtStatus(Request, STATUS_SUCCESS);
-    }
-    else
-    {
-        LogError(TRACE_DEVICE, "control NO submit code is %x", IoControlCode);
-    }
-exit:
-    return;
-}
-
-
-static VOID
-IoEvtBulkOutUrb(
-    _In_ WDFQUEUE Queue,
-    _In_ WDFREQUEST Request,
-    _In_ size_t OutputBufferLength,
-    _In_ size_t InputBufferLength,
-    _In_ ULONG IoControlCode
-)
-{
-    NTSTATUS status = STATUS_SUCCESS;
-    PUCHAR transferBuffer;
-    ULONG transferBufferLength;
-
-    UNREFERENCED_PARAMETER(Request);
-    UNREFERENCED_PARAMETER(Queue);
-    UNREFERENCED_PARAMETER(OutputBufferLength);
-    UNREFERENCED_PARAMETER(InputBufferLength);
-
-
-    if (IoControlCode == IOCTL_INTERNAL_USB_SUBMIT_URB)
-    {
-        PULONG pCheck;
-        ULONG numLongs;
-        ULONG j;
-        status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
-        if (!NT_SUCCESS(status))
-        {
-            LogError(TRACE_DEVICE, "WdfRequest %p unable to retrieve buffer %!STATUS!",
-                Request, status);
-            goto exit;
-        }
-
-        LogInfo(TRACE_DEVICE, "ubx CODE %x, [outbuf=%d inbuf=%d], trlen=%d",
-            IoControlCode,
-            (ULONG)(OutputBufferLength),
-            (ULONG)(InputBufferLength),
-            transferBufferLength
-        );
-
-
-        pCheck = (PULONG)transferBuffer;
-        numLongs = transferBufferLength / sizeof(ULONG);
-
-        // check the data with the algorithm used by the test app
-        for (j = 0; j < numLongs; j++, pCheck++ )
-        {
-            if ( (*(pCheck)) == j)
-            {
-                LogInfo(TRACE_DEVICE, "Long %d OK", j);
-            }
-            else
-            {
-                LogInfo(TRACE_DEVICE, "Long %d MISMATCH, was %x", j, (*(pCheck)) );
-            }
-        }
-
-        UdecxUrbSetBytesCompleted(Request, transferBufferLength);
-    }
-    else
-    {
-        LogError(TRACE_DEVICE, "Invalid Bulk out IOCTL code %x", IoControlCode);
-        status = STATUS_ACCESS_DENIED;
-    }
-
-exit:
-    UdecxUrbCompleteWithNtStatus(Request, status);
-    return;
-}
-
-
-
-
-
-static NTSTATUS
-Io_RetrieveControlQueue(
-    _In_
-    WDFDEVICE  Device,
-    _Out_
-    WDFQUEUE * Queue
-)
-{
-    NTSTATUS status;
-    PIO_CONTEXT pIoContext;
-    WDF_IO_QUEUE_CONFIG queueConfig;
-
-    pIoContext = WdfDeviceGetIoContext(Device);
-
-    status = STATUS_SUCCESS;
-    *Queue = NULL;
-
-    if (pIoContext->ControlQueue == NULL) {
-
-        WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchSequential);
-
-        //Sequential must specify this callback
-        queueConfig.EvtIoInternalDeviceControl = IoEvtControlUrb;
-
-        status = WdfIoQueueCreate(Device,
-            &queueConfig,
-            WDF_NO_OBJECT_ATTRIBUTES,
-            &pIoContext->ControlQueue);
-
-        if (!NT_SUCCESS(status)) {
-
-            LogError(TRACE_DEVICE, "WdfIoQueueCreate failed for ct queue %!STATUS!", status);
-            goto exit;
-        }
-    }
-
-    *Queue = pIoContext->ControlQueue;
-
-exit:
-
-    return status;
-}
-
-
-
-
-
-
-
-static NTSTATUS
-Io_RetrieveBulkOutQueue(
-    _In_
-    WDFDEVICE  Device,
-    _Out_
-    WDFQUEUE * Queue
-)
-{
-    NTSTATUS status;
-    PIO_CONTEXT pIoContext;
-    WDF_IO_QUEUE_CONFIG queueConfig;
-
-    pIoContext = WdfDeviceGetIoContext(Device);
-
-    status = STATUS_SUCCESS;
-    *Queue = NULL;
-
-    if (pIoContext->BulkOutQueue == NULL) {
-
-        WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchSequential);
-
-        //Sequential must specify this callback
-        queueConfig.EvtIoInternalDeviceControl = IoEvtBulkOutUrb;
-
-        status = WdfIoQueueCreate(Device,
-            &queueConfig,
-            WDF_NO_OBJECT_ATTRIBUTES,
-            &pIoContext->BulkOutQueue);
-
-        if (!NT_SUCCESS(status)) {
-
-            LogError(TRACE_DEVICE, "WdfIoQueueCreate failed for bulk2 queue %!STATUS!", status);
-            goto exit;
-        }
-    }
-
-    *Queue = pIoContext->BulkOutQueue;
-
-exit:
-
-    return status;
-}
-
-
-
-
-
-
-
-
-// IO -----------------------------
-
-
-
-
+// END ------------------ descriptor -------------------------------
 
 
 
@@ -544,30 +298,18 @@ Usb_ReadDescriptorsAndPlugIn(
     //
     // Create static endpoints.
     //
-    status = UsbCreateControlEndpoint(WdfDevice);
+    status = UsbCreateEndpointObj(WdfDevice, 
+        USB_DEFAULT_ENDPOINT_ADDRESS,
+        &(usbContext->UDEFX2ControlEndpoint) );
 
     if (!NT_SUCCESS(status)) {
 
         goto exit;
     }
 
-    /*
-    // TNEXT
-    status = UsbCreateInterruptEndpoint(WdfDevice);
-
-    if (!NT_SUCCESS(status)) {
-
-        goto exit;
-    }
-    status = UsbCreateBulkInEndpoint(WdfDevice);
-
-    if (!NT_SUCCESS(status)) {
-
-        goto exit;
-    }
-    */
-
-    status = UsbCreateBulkOutEndpoint(WdfDevice);
+    status = UsbCreateEndpointObj(WdfDevice,
+        g_BulkOutEndpointAddress, 
+        &(usbContext->UDEFX2BulkOutEndpoint) );
 
     if (!NT_SUCCESS(status)) {
 
@@ -656,27 +398,28 @@ Usb_UdecxUsbEndpointEvtReset(
     // TODO: endpoint reset. will require a different function prototype
 }
 
+
+
 NTSTATUS
-UsbCreateControlEndpoint(
-    _In_
-    WDFDEVICE WdfDevice
+UsbCreateEndpointObj(
+    _In_   WDFDEVICE         WdfDevice,
+    _In_   UCHAR             epAddr,
+    _Out_  UDECXUSBENDPOINT *pNewEpObjAddr
 )
 {
-    NTSTATUS                    status;
-    PUSB_CONTEXT                pUsbContext;
-    WDFQUEUE                    controlQueue;
+    NTSTATUS                      status;
+    PUSB_CONTEXT                  pUsbContext;
+    WDFQUEUE                      epQueue;
     UDECX_USB_ENDPOINT_CALLBACKS  callbacks;
     PUDECXUSBENDPOINT_INIT        endpointInit;
 
-    UNREFERENCED_PARAMETER(callbacks);
 
     pUsbContext = WdfDeviceGetUsbContext(WdfDevice);
     endpointInit = NULL;
 
-    status = Io_RetrieveControlQueue(WdfDevice, &controlQueue);
+    status = Io_RetrieveEpQueue(WdfDevice, epAddr, &epQueue);
 
     if (!NT_SUCCESS(status)) {
-
         goto exit;
     }
 
@@ -689,23 +432,22 @@ UsbCreateControlEndpoint(
         goto exit;
     }
 
-    UdecxUsbEndpointInitSetEndpointAddress(endpointInit, USB_DEFAULT_ENDPOINT_ADDRESS);
+    UdecxUsbEndpointInitSetEndpointAddress(endpointInit, epAddr);
 
     UDECX_USB_ENDPOINT_CALLBACKS_INIT(&callbacks, UsbEndpointReset);
     UdecxUsbEndpointInitSetCallbacks(endpointInit, &callbacks);
 
     status = UdecxUsbEndpointCreate(&endpointInit,
         WDF_NO_OBJECT_ATTRIBUTES,
-        &pUsbContext->UDEFX2ControlEndpoint );
+        pNewEpObjAddr );
 
     if (!NT_SUCCESS(status)) {
 
-        LogError(TRACE_DEVICE, "UdecxUsbEndpointCreate failed for control endpoint %!STATUS!", status);
+        LogError(TRACE_DEVICE, "UdecxUsbEndpointCreate failed for endpoint %x, %!STATUS!", epAddr, status);
         goto exit;
     }
 
-    UdecxUsbEndpointSetWdfIoQueue(pUsbContext->UDEFX2ControlEndpoint,
-        controlQueue);
+    UdecxUsbEndpointSetWdfIoQueue( *pNewEpObjAddr,  epQueue);
 
 exit:
 
@@ -722,75 +464,6 @@ exit:
 
 
 
-
-
-
-
-
-
-
-NTSTATUS
-UsbCreateBulkOutEndpoint(
-    _In_
-    WDFDEVICE WdfDevice
-)
-{
-    NTSTATUS                    status;
-    PUSB_CONTEXT                pUsbContext;
-    WDFQUEUE                    bulkOutQueue;
-    UDECX_USB_ENDPOINT_CALLBACKS  callbacks;
-    PUDECXUSBENDPOINT_INIT        endpointInit;
-
-    UNREFERENCED_PARAMETER(callbacks);
-
-    pUsbContext = WdfDeviceGetUsbContext(WdfDevice);
-    endpointInit = NULL;
-
-    status = Io_RetrieveBulkOutQueue(WdfDevice, &bulkOutQueue);
-
-    if (!NT_SUCCESS(status)) {
-
-        goto exit;
-    }
-
-    endpointInit = UdecxUsbSimpleEndpointInitAllocate(pUsbContext->UDEFX2Device);
-
-    if (endpointInit == NULL) {
-
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        LogError(TRACE_DEVICE, "Failed to allocate endpoint init %!STATUS!", status);
-        goto exit;
-    }
-
-    UdecxUsbEndpointInitSetEndpointAddress(endpointInit, g_BulkOutEndpointAddress);
-
-    UDECX_USB_ENDPOINT_CALLBACKS_INIT(&callbacks, UsbEndpointReset);
-    UdecxUsbEndpointInitSetCallbacks(endpointInit, &callbacks);
-
-    status = UdecxUsbEndpointCreate(&endpointInit,
-        WDF_NO_OBJECT_ATTRIBUTES,
-        &pUsbContext->UDEFX2BulkOutEndpoint );
-
-    if (!NT_SUCCESS(status)) {
-
-        LogError(TRACE_DEVICE, "UdecxUsbEndpointCreate failed for control endpoint %!STATUS!", status);
-        goto exit;
-    }
-
-    UdecxUsbEndpointSetWdfIoQueue(pUsbContext->UDEFX2BulkOutEndpoint,
-        bulkOutQueue);
-
-exit:
-
-    if (endpointInit != NULL) {
-
-        NT_ASSERT(!NT_SUCCESS(status));
-        UdecxUsbEndpointInitFree(endpointInit);
-        endpointInit = NULL;
-    }
-
-    return status;
-}
 
 VOID
 UsbEndpointReset(
@@ -877,141 +550,3 @@ UsbDevice_EvtUsbDeviceSetFunctionSuspendAndWake(
 
 
 
-
-
-
-
-
-
-/// not used YET
-
-/*
-
-NTSTATUS
-UsbCreateInterruptEndpoint(
-    _In_
-    WDFDEVICE WdfDevice
-)
-{
-    NTSTATUS                    status;
-    PUSB_CONTEXT                pUsbContext;
-    PUDECXUSBENDPOINT_INIT        endpointInit;
-    WDFQUEUE                    interruptQueue;
-    UDECX_USB_ENDPOINT_CALLBACKS  callbacks;
-
-    UNREFERENCED_PARAMETER(callbacks);
-
-    pUsbContext = WdfDeviceGetUsbContext(WdfDevice);
-    endpointInit = NULL;
-
-    status = Io_RetrieveInterruptQueue(WdfDevice, &interruptQueue);
-
-    if (!NT_SUCCESS(status)) {
-
-        goto exit;
-    }
-
-    endpointInit = UdecxUsbSimpleEndpointInitAllocate(pUsbContext->UDEFX2Device);
-
-    if (endpointInit == NULL) {
-
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        LogError(TRACE_DEVICE, "Failed to allocate endpoint init %!STATUS!", status);
-        goto exit;
-    }
-
-    UdecxUsbEndpointInitSetEndpointAddress(endpointInit, g_InterruptEndpointAddress);
-
-    UDECX_USB_ENDPOINT_CALLBACKS_INIT(&callbacks, UsbEndpointReset);
-    UdecxUsbEndpointInitSetCallbacks(endpointInit, &callbacks);
-
-    status = UdecxUsbEndpointCreate(&endpointInit,
-        WDF_NO_OBJECT_ATTRIBUTES,
-        &pUsbContext->UDEFX2InterruptInEndpoint);
-
-    if (!NT_SUCCESS(status)) {
-
-        LogError(TRACE_DEVICE, "UdecxUsbEndpointCreate failed for interrupt endpoint %!STATUS!", status);
-        goto exit;
-    }
-
-    UdecxUsbEndpointSetWdfIoQueue(pUsbContext->UDEFX2InterruptInEndpoint,
-        interruptQueue);
-
-exit:
-
-    if (endpointInit != NULL) {
-
-        NT_ASSERT(!NT_SUCCESS(status));
-        UdecxUsbEndpointInitFree(endpointInit);
-        endpointInit = NULL;
-    }
-
-    return status;
-}
-
-
-NTSTATUS
-UsbCreateBulkInEndpoint(
-    _In_
-    WDFDEVICE WdfDevice
-)
-{
-    NTSTATUS                    status;
-    PUSB_CONTEXT                pUsbContext;
-    WDFQUEUE                    bulkInQueue;
-    UDECX_USB_ENDPOINT_CALLBACKS  callbacks;
-    PUDECXUSBENDPOINT_INIT        endpointInit;
-
-    UNREFERENCED_PARAMETER(callbacks);
-
-    pUsbContext = WdfDeviceGetUsbContext(WdfDevice);
-    endpointInit = NULL;
-
-    status = Io_RetrieveBulkInQueue(WdfDevice, &bulkInQueue);
-
-    if (!NT_SUCCESS(status)) {
-
-        goto exit;
-    }
-
-    endpointInit = UdecxUsbSimpleEndpointInitAllocate(pUsbContext->UDEFX2Device);
-
-    if (endpointInit == NULL) {
-
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        LogError(TRACE_DEVICE, "Failed to allocate endpoint init %!STATUS!", status);
-        goto exit;
-    }
-
-    UdecxUsbEndpointInitSetEndpointAddress(endpointInit, g_BulkInEndpointAddress);
-
-    UDECX_USB_ENDPOINT_CALLBACKS_INIT(&callbacks, UsbEndpointReset);
-    UdecxUsbEndpointInitSetCallbacks(endpointInit, &callbacks);
-
-    status = UdecxUsbEndpointCreate(&endpointInit,
-        WDF_NO_OBJECT_ATTRIBUTES,
-        &pUsbContext->UDEFX2BulkInEndpoint);
-
-    if (!NT_SUCCESS(status)) {
-
-        LogError(TRACE_DEVICE, "UdecxUsbEndpointCreate failed for control endpoint %!STATUS!", status);
-        goto exit;
-    }
-
-    UdecxUsbEndpointSetWdfIoQueue(pUsbContext->UDEFX2BulkInEndpoint,
-        bulkInQueue);
-
-exit:
-
-    if (endpointInit != NULL) {
-
-        NT_ASSERT(!NT_SUCCESS(status));
-        UdecxUsbEndpointInitFree(endpointInit);
-        endpointInit = NULL;
-    }
-
-    return status;
-}
-
-*/
