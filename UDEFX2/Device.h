@@ -53,12 +53,8 @@ WDF_DECLARE_CONTEXT_TYPE(REQUEST_CONTEXT);
 
 typedef struct _IO_CONTEXT {
 	WDFQUEUE ControlQueue;
-	WDFQUEUE InterruptUrbQueue;
-	WDFQUEUE BulkInQueue;
 	WDFQUEUE BulkOutQueue;
 	WDFSPINLOCK InProgressLock;
-	LIST_ENTRY AvailableInterrupt;
-	LIST_ENTRY EncapsulatedCommandResponse;
 } IO_CONTEXT, *PIO_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(IO_CONTEXT, WdfDeviceGetIoContext);

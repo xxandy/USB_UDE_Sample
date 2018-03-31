@@ -32,10 +32,6 @@ typedef struct _USB_CONTEXT {
 	UDECXUSBDEVICE        UDEFX2Device;
 	UDECXUSBENDPOINT      UDEFX2ControlEndpoint;
 	UDECXUSBENDPOINT      UDEFX2BulkOutEndpoint;
-	UDECXUSBENDPOINT      UDEFX2BulkInEndpoint;
-	UDECXUSBENDPOINT      UDEFX2InterruptInEndpoint;
-	ULONG                 MaxBulkInTransfer;
-	USHORT                NTBFormatSetupValue;
 } USB_CONTEXT, *PUSB_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(USB_CONTEXT, WdfDeviceGetUsbContext);

@@ -63,7 +63,7 @@ IoEvtControlUrb(
         }
 
 
-        LogInfo(TRACE_DEVICE, "v2 control CODE %x, [type=%x dir=%x recip=%x] req=%x [wv = %x wi = %x wlen = %x]",
+        LogInfo(TRACE_DEVICE, "v3 control CODE %x, [type=%x dir=%x recip=%x] req=%x [wv = %x wi = %x wlen = %x]",
             IoControlCode,
             (int)(setupPacket.Packet.bm.Request.Type),
             (int)(setupPacket.Packet.bm.Request.Dir),
@@ -136,7 +136,7 @@ IoEvtBulkOutUrb(
         {
             if ((*(pCheck)) == j)
             {
-                LogInfo(TRACE_DEVICE, "v2 Long %d OK", j);
+                LogInfo(TRACE_DEVICE, "v3 Long %d OK", j);
             }
             else
             {
