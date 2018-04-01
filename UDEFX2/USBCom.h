@@ -27,6 +27,7 @@ Abstract:
 typedef struct _IO_CONTEXT {
     WDFQUEUE ControlQueue;
     WDFQUEUE BulkOutQueue;
+    WDFQUEUE BulkInQueue;
     WDFSPINLOCK InProgressLock;
 } IO_CONTEXT, *PIO_CONTEXT;
 

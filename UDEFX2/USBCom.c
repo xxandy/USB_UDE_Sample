@@ -199,6 +199,73 @@ exit:
 
 
 
+static VOID
+IoEvtBulkInUrb(
+    _In_ WDFQUEUE Queue,
+    _In_ WDFREQUEST Request,
+    _In_ size_t OutputBufferLength,
+    _In_ size_t InputBufferLength,
+    _In_ ULONG IoControlCode
+)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    PUCHAR transferBuffer;
+    ULONG transferBufferLength;
+
+    UNREFERENCED_PARAMETER(Request);
+    UNREFERENCED_PARAMETER(Queue);
+    UNREFERENCED_PARAMETER(OutputBufferLength);
+    UNREFERENCED_PARAMETER(InputBufferLength);
+
+
+    if (IoControlCode == IOCTL_INTERNAL_USB_SUBMIT_URB)
+    {
+        PULONG pCheck;
+        ULONG numLongs;
+        ULONG j;
+        status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
+        if (!NT_SUCCESS(status))
+        {
+            LogError(TRACE_DEVICE, "WdfRequest %p unable to retrieve buffer %!STATUS!",
+                Request, status);
+            goto exit;
+        }
+
+        LogInfo(TRACE_DEVICE, "IN ubx CODE %x, [outbuf=%d inbuf=%d], trlen=%d",
+            IoControlCode,
+            (ULONG)(OutputBufferLength),
+            (ULONG)(InputBufferLength),
+            transferBufferLength
+        );
+
+
+        pCheck = (PULONG)transferBuffer;
+        numLongs = transferBufferLength / sizeof(ULONG);
+
+        // check the data with the algorithm used by the test app
+        for (j = 0; j < numLongs; j++, pCheck++)
+        {
+            (*(pCheck)) = (j + 42);
+            LogInfo(TRACE_DEVICE, "v44 Produced %d OK", (j + 42));
+        }
+
+        UdecxUrbSetBytesCompleted(Request, transferBufferLength);
+    }
+    else
+    {
+        LogError(TRACE_DEVICE, "Invalid Bulk out IOCTL code %x", IoControlCode);
+        status = STATUS_ACCESS_DENIED;
+    }
+
+exit:
+    UdecxUrbCompleteWithNtStatus(Request, status);
+    return;
+}
+
+
+
+
+
 
 
 
@@ -227,6 +294,11 @@ Io_RetrieveEpQueue(
     case g_BulkOutEndpointAddress:
         pQueueRecord = &(pIoContext->BulkOutQueue);
         pIoCallback = IoEvtBulkOutUrb;
+        break;
+
+    case g_BulkInEndpointAddress:
+        pQueueRecord = &(pIoContext->BulkInQueue);
+        pIoCallback = IoEvtBulkInUrb;
         break;
 
     default:

@@ -854,6 +854,15 @@ Return Value:
         //
         WdfUsbTargetPipeSetNoMaximumPacketSizeCheck(pipe);
 
+
+
+        if(WdfUsbPipeTypeBulk == pipeInfo.PipeType &&
+                WdfUsbTargetPipeIsInEndpoint(pipe)) {
+            TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTL,
+                    "BulkInput Pipe is 0x%p\n", pipe);
+            pDeviceContext->BulkReadPipe = pipe;
+        }
+
         if(WdfUsbPipeTypeBulk == pipeInfo.PipeType &&
                 WdfUsbTargetPipeIsOutEndpoint(pipe)) {
             TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTL,
@@ -864,9 +873,10 @@ Return Value:
     }
 
     //
-    // If we didn't find all the pipes, fail the start.
+    // If we didn't find all the 2 pipes, fail the start.
     //
-    if(!(pDeviceContext->BulkWritePipe)) {
+    if(!(pDeviceContext->BulkWritePipe
+             && pDeviceContext->BulkReadPipe)) {
         status = STATUS_INVALID_DEVICE_STATE;
         TraceEvents(TRACE_LEVEL_ERROR, DBG_PNP,
                             "Device is not configured properly %!STATUS!\n",

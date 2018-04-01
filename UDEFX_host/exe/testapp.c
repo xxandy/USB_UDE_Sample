@@ -760,6 +760,10 @@ Return Value:
                     assert(G_ReadLen == G_WriteLen);
                     assert(nBytesRead == G_ReadLen);
                 }
+                else if (G_fDumpReadData) {
+                    printf("Dumping read buffer\n");
+                    Dump((PUCHAR)pinBuf, nBytesRead);
+                }
             }
         }
 
