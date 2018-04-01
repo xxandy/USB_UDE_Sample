@@ -43,7 +43,7 @@ Environment:
 #define WPP_CHECK_FOR_NULL_STRING  //to prevent exceptions due to NULL strings
 
 #define WPP_CONTROL_GUIDS \
-    WPP_DEFINE_CONTROL_GUID(OsrUsbFxTraceGuid,(d23a0c5a,d307,4f0e,ae8e,E2A355AD5DAB), \
+    WPP_DEFINE_CONTROL_GUID(OsrUsbFxTraceGuid,(421C10CF,EDE5,4227,BB72,8C479A5EAD60), \
         WPP_DEFINE_BIT(DBG_INIT)             /* bit  0 = 0x00000001 */ \
         WPP_DEFINE_BIT(DBG_PNP)              /* bit  1 = 0x00000002 */ \
         WPP_DEFINE_BIT(DBG_POWER)            /* bit  2 = 0x00000004 */ \
