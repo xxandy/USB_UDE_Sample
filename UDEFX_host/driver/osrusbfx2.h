@@ -77,6 +77,18 @@ extern const __declspec(selectany) LONGLONG DEFAULT_CONTROL_TRANSFER_TIMEOUT = 5
 #define BULK_OUT_ENDPOINT_INDEX        1
 #define BULK_IN_ENDPOINT_INDEX         2
 
+
+//
+// Data that the device reports via interrupts
+//
+
+
+typedef struct _DEVICE_INTR_STATE {
+    DEVICE_INTR_FLAGS latestStatus;
+    ULONG             numUnreadUpdates;
+} DEVICE_INTR_STATE, *PDEVICE_INTR_STATE;
+
+
 //
 // A structure representing the instance information associated with
 // this particular device.
@@ -92,11 +104,18 @@ typedef struct _DEVICE_CONTEXT {
 
     WDFUSBPIPE                      BulkWritePipe;
 
+    WDFUSBPIPE                      InterruptPipe;
+
     WDFWAITLOCK                     ResetDeviceWaitLock;
 
     UCHAR                           CurrentSwitchState;
 
+    WDFQUEUE                        InterruptMsgQueue;
+
+    DEVICE_INTR_STATE               InterruptStatus;
+
     ULONG                           UsbDeviceTraits;
+
 
     //
     // The following fields are used during event logging to 
@@ -186,14 +205,35 @@ ReenumerateDevice(
     );
 
 
+VOID
+OsrCompleteInterruptRequest(
+    _In_ WDFREQUEST request,
+    _In_ NTSTATUS  ReaderStatus,
+    _In_ DEVICE_INTR_FLAGS NewDeviceFlags
+    );
+
+VOID
+OsrUsbIoctlGetInterruptMessage(
+    _In_ WDFDEVICE Device,
+    _In_ NTSTATUS ReaderStatus,
+    _In_ DEVICE_INTR_FLAGS NewDeviceFlags
+    );
+
 _IRQL_requires_(PASSIVE_LEVEL)
 NTSTATUS
 OsrFxSetPowerPolicy(
         _In_ WDFDEVICE Device
     );
 
+_IRQL_requires_(PASSIVE_LEVEL)
+NTSTATUS
+OsrFxConfigContReaderForInterruptEndPoint(
+    _In_ PDEVICE_CONTEXT DeviceContext
+    );
 
+EVT_WDF_USB_READER_COMPLETION_ROUTINE OsrFxEvtUsbInterruptPipeReadComplete;
 
+EVT_WDF_USB_READERS_FAILED OsrFxEvtUsbInterruptReadersFailed;
 
 EVT_WDF_IO_QUEUE_IO_STOP OsrFxEvtIoStop;
 

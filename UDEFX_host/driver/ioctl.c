@@ -67,7 +67,7 @@ Return Value:
     WDFDEVICE           device;
     PDEVICE_CONTEXT     pDevContext;
     size_t              bytesReturned = 0;
-    BOOLEAN             requestPending = FALSE;
+    BOOLEAN             defaultCompletionNeeded = TRUE;
     NTSTATUS            status = STATUS_INVALID_DEVICE_REQUEST;
 
     UNREFERENCED_PARAMETER(InputBufferLength);
@@ -155,13 +155,49 @@ Return Value:
 
 
 
+    case IOCTL_OSRUSBFX2_GET_INTERRUPT_MESSAGE:
+        {
+            BOOLEAN bDataReady = FALSE;
+            DEVICE_INTR_FLAGS newData = 0;
+
+            // TODO: spin lock around this check and transition
+            if (pDevContext->InterruptStatus.numUnreadUpdates > 0)
+            {
+                // data is ready ahead of time, grab it
+                bDataReady = TRUE;
+                newData = pDevContext->InterruptStatus.latestStatus;
+                pDevContext->InterruptStatus.numUnreadUpdates = 0;
+                pDevContext->InterruptStatus.latestStatus = 0;
+            }
+
+            if (bDataReady)
+            {
+                // complete immediately - does not need to traverse the queue
+                OsrCompleteInterruptRequest(Request, STATUS_SUCCESS, newData);
+                defaultCompletionNeeded = FALSE;
+            }
+            else
+            {
+                // We haven't heard from the device since last update, so
+                // forward the request to an interrupt message queue and dont complete
+                // the request until an interrupt from the USB device occurs.
+                // Note that WDK will automatically cancel this request if needed.
+                //
+                status = WdfRequestForwardToIoQueue(Request, pDevContext->InterruptMsgQueue);
+                if (NT_SUCCESS(status)) {
+                    defaultCompletionNeeded = FALSE;
+                }
+            }
+        }
+
+        break;
 
     default :
         status = STATUS_INVALID_DEVICE_REQUEST;
         break;
     }
 
-    if (requestPending == FALSE) {
+    if (defaultCompletionNeeded) {
         WdfRequestCompleteWithInformation(Request, status, bytesReturned);
     }
 
@@ -220,6 +256,8 @@ StopAllPipes(
     IN PDEVICE_CONTEXT DeviceContext
     )
 {
+    WdfIoTargetStop(WdfUsbTargetPipeGetIoTarget(DeviceContext->InterruptPipe),
+                                 WdfIoTargetCancelSentIo);
     WdfIoTargetStop(WdfUsbTargetPipeGetIoTarget(DeviceContext->BulkReadPipe),
                                  WdfIoTargetCancelSentIo);
     WdfIoTargetStop(WdfUsbTargetPipeGetIoTarget(DeviceContext->BulkWritePipe),
@@ -233,6 +271,10 @@ StartAllPipes(
 {
     NTSTATUS status;
 
+    status = WdfIoTargetStart(WdfUsbTargetPipeGetIoTarget(DeviceContext->InterruptPipe));
+    if (!NT_SUCCESS(status)) {
+        return status;
+    }
 
     status = WdfIoTargetStart(WdfUsbTargetPipeGetIoTarget(DeviceContext->BulkReadPipe));
     if (!NT_SUCCESS(status)) {
@@ -379,6 +421,142 @@ Return Value:
                                  status);
 
     return status;
+
+}
+
+VOID
+OsrCompleteInterruptRequest(
+    _In_ WDFREQUEST request,
+    _In_ NTSTATUS  ReaderStatus,
+    _In_ DEVICE_INTR_FLAGS NewDeviceFlags
+)
+/*++
+
+Routine Description
+
+Completes one pending interrupt request and resets pending updates to zero.
+
+Arguments:
+
+request - Handle to the request to complete
+ReaderStatus - status of read operation
+NewDeviceFlags - new hardware data obtained with this interrupt, if status is success
+
+Return Value:
+
+None.
+
+--*/
+{
+    NTSTATUS            status;
+    size_t              bytesReturned = 0;
+    PDEVICE_INTR_FLAGS  intrFlags = NULL;
+
+    status = WdfRequestRetrieveOutputBuffer(request,
+        sizeof(DEVICE_INTR_FLAGS),
+        &intrFlags,
+        NULL);// BufferLength
+
+    if (!NT_SUCCESS(status)) {
+
+        TraceEvents(TRACE_LEVEL_ERROR, DBG_IOCTL,
+            "User's output buffer is too small for this IOCTL, expecting a DEVICE_INTR_FLAGS\n");
+        bytesReturned = sizeof(DEVICE_INTR_FLAGS);
+
+    }
+    else {
+
+        //
+        // Copy the state information saved by the continuous reader.
+        //
+        if (NT_SUCCESS(ReaderStatus)) {
+            memcpy(intrFlags, &NewDeviceFlags, sizeof(NewDeviceFlags));
+            bytesReturned = sizeof(DEVICE_INTR_FLAGS);
+        }
+        else {
+            bytesReturned = 0;
+        }
+    }
+
+    //
+    // Complete the request.  If we failed to get the output buffer then
+    // complete with that status.  Otherwise complete with the status from the reader.
+    //
+    WdfRequestCompleteWithInformation(request,
+        NT_SUCCESS(status) ? ReaderStatus : status,
+        bytesReturned);
+
+    return;
+}
+
+
+VOID
+OsrUsbIoctlGetInterruptMessage(
+    _In_ WDFDEVICE Device,
+    _In_ NTSTATUS  ReaderStatus,
+    _In_ DEVICE_INTR_FLAGS NewDeviceFlags
+)
+/*++
+
+Routine Description
+
+    This method handles the completion of the pended request for the IOCTL
+    IOCTL_OSRUSBFX2_GET_INTERRUPT_MESSAGE.
+
+Arguments:
+
+    Device - Handle to a framework device.
+    ReaderStatus - status of read operation
+    NewDeviceFlags - new hardware data obtained with this interrupt, if status is success
+
+Return Value:
+
+    None.
+
+--*/
+{
+    NTSTATUS            status;
+    WDFREQUEST          request;
+    PDEVICE_CONTEXT     pDevContext;
+
+    pDevContext = GetDeviceContext(Device);
+
+    //
+    // Check if there are any pending requests in the Interrupt Message Queue.
+    status = WdfIoQueueRetrieveNextRequest(pDevContext->InterruptMsgQueue, &request);
+
+    // TODO: spin lock around this check and transition
+    if (NT_SUCCESS(ReaderStatus)) { // new data produced
+        if (NT_SUCCESS(status)) { // and there's at least one waiter
+            // clear the data, as it will be consumed by this waiter right down below
+            pDevContext->InterruptStatus.latestStatus = 0;
+            pDevContext->InterruptStatus.numUnreadUpdates = 0;
+        }
+        else { // overwrite any existing status and bump the count
+            pDevContext->InterruptStatus.latestStatus = NewDeviceFlags;
+            ++(pDevContext->InterruptStatus.numUnreadUpdates);
+        }
+    }
+    else if( ReaderStatus != STATUS_CANCELLED ) { // error or termination
+        // erase any prior data
+        pDevContext->InterruptStatus.latestStatus = 0;
+        pDevContext->InterruptStatus.numUnreadUpdates = 0;
+    }
+
+    // we will unconditionally empty the queue
+    while( NT_SUCCESS(status) )  {
+        OsrCompleteInterruptRequest(request, ReaderStatus, NewDeviceFlags);
+        request = NULL;
+
+        status = WdfIoQueueRetrieveNextRequest(pDevContext->InterruptMsgQueue, &request);
+
+    } while (status == STATUS_SUCCESS);
+
+    if (status != STATUS_NO_MORE_ENTRIES) {
+        KdPrint(("Interrupt queue draining ended with bad status %08x\n", status));
+    }
+
+    return;
 
 }
 

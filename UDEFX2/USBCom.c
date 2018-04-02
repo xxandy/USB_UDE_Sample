@@ -263,6 +263,87 @@ exit:
 }
 
 
+static VOID
+IoEvtCancelInterruptInUrb(
+    IN WDFREQUEST  Request
+)
+{
+    LogError(TRACE_DEVICE, "Canceling request %p", Request);
+    UdecxUrbCompleteWithNtStatus(Request, STATUS_CANCELLED);
+}
+
+
+static VOID
+IoEvtInterruptInUrb(
+    _In_ WDFQUEUE Queue,
+    _In_ WDFREQUEST Request,
+    _In_ size_t OutputBufferLength,
+    _In_ size_t InputBufferLength,
+    _In_ ULONG IoControlCode
+)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    PUCHAR transferBuffer;
+    ULONG transferBufferLength;
+    static int _s_serviceCtr = 0;
+
+    UNREFERENCED_PARAMETER(Request);
+    UNREFERENCED_PARAMETER(Queue);
+    UNREFERENCED_PARAMETER(OutputBufferLength);
+    UNREFERENCED_PARAMETER(InputBufferLength);
+
+    if ((++_s_serviceCtr) > 4)
+    {
+        LogError(TRACE_DEVICE, "Interrupt: marking + hanging %p to prevent tight loop", Request);
+        WdfRequestMarkCancelable(Request, IoEvtCancelInterruptInUrb);
+        return;
+    }
+
+
+    if (IoControlCode == IOCTL_INTERNAL_USB_SUBMIT_URB)
+    {
+        PULONG pCheck;
+        ULONG numLongs;
+        ULONG j;
+        status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
+        if (!NT_SUCCESS(status))
+        {
+            LogError(TRACE_DEVICE, "WdfRequest %p unable to retrieve buffer %!STATUS!",
+                Request, status);
+            goto exit;
+        }
+
+        LogInfo(TRACE_DEVICE, "INTR ubx CODE %x, [outbuf=%d inbuf=%d], trlen=%d",
+            IoControlCode,
+            (ULONG)(OutputBufferLength),
+            (ULONG)(InputBufferLength),
+            transferBufferLength
+        );
+
+
+        pCheck = (PULONG)transferBuffer;
+        numLongs = transferBufferLength / sizeof(ULONG);
+
+        // check the data with the algorithm used by the test app
+        for (j = 0; j < numLongs; j++, pCheck++)
+        {
+            (*(pCheck)) = (j + 88);
+            LogInfo(TRACE_DEVICE, "v44 INTR %d OK", (j + 42));
+        }
+
+        UdecxUrbSetBytesCompleted(Request, transferBufferLength);
+    }
+    else
+    {
+        LogError(TRACE_DEVICE, "Invalid Interrupt/IN out IOCTL code %x", IoControlCode);
+        status = STATUS_ACCESS_DENIED;
+    }
+
+exit:
+    UdecxUrbCompleteWithNtStatus(Request, status);
+    return;
+}
+
 
 
 
@@ -299,6 +380,11 @@ Io_RetrieveEpQueue(
     case g_BulkInEndpointAddress:
         pQueueRecord = &(pIoContext->BulkInQueue);
         pIoCallback = IoEvtBulkInUrb;
+        break;
+
+    case g_InterruptEndpointAddress:
+        pQueueRecord = &(pIoContext->InterruptUrbQueue);
+        pIoCallback = IoEvtInterruptInUrb;
         break;
 
     default:

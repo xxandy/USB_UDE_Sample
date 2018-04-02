@@ -59,6 +59,7 @@ BOOL G_fDumpUsbConfig = FALSE;    // flags set in response to console command li
 BOOL G_fDumpReadData = FALSE;
 BOOL G_fRead = FALSE;
 BOOL G_fWrite = FALSE;
+BOOL G_fGetDeviceInterrupt = FALSE;
 BOOL G_fPerformAsyncIo = FALSE;
 ULONG G_IterationCount = 1; //count of iterations of the test we are to perform
 ULONG G_WriteLen = 512;         // #bytes to write
@@ -158,6 +159,8 @@ clean0:
 }
 
 
+
+
 _Check_return_
 _Ret_notnull_
 _Success_(return != INVALID_HANDLE_VALUE)
@@ -194,7 +197,7 @@ Return Value:
         return  INVALID_HANDLE_VALUE;
     }
 
-    printf("DeviceName = (%S)\n", completeDeviceName);
+    printf("DeviceName = (%S)\n", completeDeviceName); fflush(stdout);
 
     if(Synchronous) {
         hDev = CreateFile(completeDeviceName,
@@ -216,9 +219,9 @@ Return Value:
     }
 
     if (hDev == INVALID_HANDLE_VALUE) {
-        printf("Failed to open the device, error - %d", GetLastError());
+        printf("Failed to open the device, error - %d", GetLastError()); fflush(stdout);
     } else {
-        printf("Opened the device successfully.\n");
+        printf("Opened the device successfully.\n"); fflush(stdout);
     }
 
     return hDev;
@@ -251,7 +254,7 @@ Return Value:
     printf("-w [n] where n is number of bytes to write\n");
     printf("-c [n] where n is number of iterations (default = 1)\n");
     printf("-v verbose -- dumps read data\n");
-    printf("-p to control bar LEDs, seven segment, and dip switch\n");
+    printf("-p receive device interrupt\n");
     printf("-a to perform asynchronous I/O\n");
     printf("-u to dump USB configuration and pipe info \n");
 
@@ -329,6 +332,10 @@ Return Value:
             case 'u':
             case 'U':
                 G_fDumpUsbConfig = TRUE;
+                break;
+            case 'p':
+            case 'P':
+                G_fGetDeviceInterrupt = TRUE;
                 break;
             case 'a':
             case 'A':
@@ -418,6 +425,51 @@ Return Value:
         printf("\n");
     }
     printf("\n****** END DUMP LEN decimal %d, 0x%x\n", len,len);
+}
+
+BOOL
+GetDeviceInterrupt()
+{
+    HANDLE          deviceHandle;
+    DWORD           code;
+    ULONG           index = 0;
+    DEVICE_INTR_FLAGS  flagsState = 0;
+
+    printf("About to open device\n"); fflush(stdout);
+
+    deviceHandle = OpenDevice(TRUE /*synchronous*/ );
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find any OSR FX2 devices!\n"); fflush(stdout);
+
+        return FALSE;
+
+    }
+
+    printf("Device open, waiting for interrupt...\n"); fflush(stdout);
+
+    if (!DeviceIoControl(deviceHandle,
+                            IOCTL_OSRUSBFX2_GET_INTERRUPT_MESSAGE,
+                            NULL,                  // Ptr to InBuffer
+                            0,                     // Length of InBuffer
+                            &flagsState,           // Ptr to OutBuffer
+                            sizeof(flagsState),    // Length of OutBuffer
+                            &index,                // BytesReturned
+                            0)) {                  // Ptr to Overlapped structure
+
+        code = GetLastError();
+
+        printf("DeviceIoControl failed with error 0x%x\n", code);
+
+    }
+    else
+    {
+        printf("DeviceIoControl SUCCESS , returned 0x%x, bytes=%d\n", flagsState, index);
+    }
+
+    CloseHandle(deviceHandle);
+    return TRUE;
 }
 
 
@@ -614,8 +666,9 @@ Return Value:
     ULONG  fail = 0L;
     ULONG  i;
 
-
+    printf("About parse\n"); fflush(stdout);
     Parse(argc, argv );
+    printf("Done parsing\n"); fflush(stdout);
 
     //
     // dump USB configuation and pipe info
@@ -624,6 +677,13 @@ Return Value:
         DumpUsbConfig();
     }
 
+
+    if (G_fGetDeviceInterrupt)
+    {
+        printf("About to get device interrupt\n"); fflush(stdout);
+        GetDeviceInterrupt();
+        goto exit;
+    }
 
     if (G_fPerformAsyncIo) {
         HANDLE  th1;
@@ -713,6 +773,7 @@ Return Value:
                 //
                 // send the write
                 //
+                printf("About to write %d bytes\n", G_WriteLen);
                 success = WriteFile(hWrite, poutBuf, G_WriteLen, &nBytesWrite, NULL);
                 if(success == 0) {
                     printf("WriteFile failed - error %d\n", GetLastError());
@@ -727,6 +788,7 @@ Return Value:
 
             if (G_fRead && pinBuf) {
 
+                printf("About to read %d bytes\n", G_ReadLen);
                 success = ReadFile(hRead, pinBuf, G_ReadLen, &nBytesRead, NULL);
                 if(success == 0) {
                     printf("ReadFile failed - error %d\n", GetLastError());

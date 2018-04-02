@@ -264,6 +264,33 @@ Return Value:
         goto Error;
     }
 
+    //
+    // Register a manual I/O queue for handling Interrupt Message Read Requests.
+    // This queue will be used for storing Requests that need to wait for an
+    // interrupt to occur before they can be completed.
+    //
+    WDF_IO_QUEUE_CONFIG_INIT(&ioQueueConfig, WdfIoQueueDispatchManual);
+
+    //
+    // This queue is used for requests that dont directly access the device. The
+    // requests in this queue are serviced only when the device is in a fully
+    // powered state and sends an interrupt. So we can use a non-power managed
+    // queue to park the requests since we dont care whether the device is idle
+    // or fully powered up.
+    //
+    ioQueueConfig.PowerManaged = WdfFalse;
+
+    status = WdfIoQueueCreate(device,
+                              &ioQueueConfig,
+                              WDF_NO_OBJECT_ATTRIBUTES,
+                              &pDevContext->InterruptMsgQueue
+                              );
+
+    if (!NT_SUCCESS(status)) {
+        TraceEvents(TRACE_LEVEL_ERROR, DBG_PNP,
+            "WdfIoQueueCreate failed 0x%x\n", status);
+        goto Error;
+    }
 
     //
     // Register a device interface so that app can find our device and talk to it.
@@ -522,6 +549,8 @@ Return Value:
         }
     }
 
+    status = OsrFxConfigContReaderForInterruptEndPoint(pDeviceContext);
+
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_PNP, "<-- EvtDevicePrepareHardware\n");
 
     return status;
@@ -567,13 +596,40 @@ Return Value:
 
 --*/
 {
-    NTSTATUS                status = STATUS_SUCCESS;
+    PDEVICE_CONTEXT         pDeviceContext;
+    NTSTATUS                status;
+    BOOLEAN                 isTargetStarted;
 
-    UNREFERENCED_PARAMETER(Device);
+    pDeviceContext = GetDeviceContext(Device);
+    isTargetStarted = FALSE;
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_POWER,
                 "-->OsrFxEvtEvtDeviceD0Entry - coming from %s\n",
                 DbgDevicePowerString(PreviousState));
+
+    //
+    // Since continuous reader is configured for this interrupt-pipe, we must explicitly start
+    // the I/O target to get the framework to post read requests.
+    //
+    status = WdfIoTargetStart(WdfUsbTargetPipeGetIoTarget(pDeviceContext->InterruptPipe));
+    if (!NT_SUCCESS(status)) {
+        TraceEvents(TRACE_LEVEL_ERROR, DBG_POWER, "Failed to start interrupt pipe %!STATUS!\n", status);
+        goto End;
+    }
+
+    isTargetStarted = TRUE;
+
+End:
+
+    if (!NT_SUCCESS(status)) {
+        //
+        // Failure in D0Entry will lead to device being removed. So let us stop the continuous
+        // reader in preparation for the ensuing remove.
+        //
+        if (isTargetStarted) {
+            WdfIoTargetStop(WdfUsbTargetPipeGetIoTarget(pDeviceContext->InterruptPipe), WdfIoTargetCancelSentIo);
+        }
+    }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_POWER, "<--OsrFxEvtEvtDeviceD0Entry\n");
 
@@ -624,14 +680,17 @@ Return Value:
 
 --*/
 {
+    PDEVICE_CONTEXT         pDeviceContext;
+
     PAGED_CODE();
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_POWER,
           "-->OsrFxEvtDeviceD0Exit - moving to %s\n",
           DbgDevicePowerString(TargetState));
 
-    UNREFERENCED_PARAMETER(Device);
+    pDeviceContext = GetDeviceContext(Device);
 
+    WdfIoTargetStop(WdfUsbTargetPipeGetIoTarget(pDeviceContext->InterruptPipe),   WdfIoTargetCancelSentIo);
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_POWER, "<--OsrFxEvtDeviceD0Exit\n");
 
@@ -659,7 +718,9 @@ Return Value:
 
 --*/
 {
-    UNREFERENCED_PARAMETER(Device);
+    // Service the interrupt message queue to drain any outstanding
+    // requests
+    OsrUsbIoctlGetInterruptMessage(Device, STATUS_DEVICE_REMOVED, 0 /*irrelevant*/ );
 }
 
 _IRQL_requires_(PASSIVE_LEVEL)
@@ -854,7 +915,11 @@ Return Value:
         //
         WdfUsbTargetPipeSetNoMaximumPacketSizeCheck(pipe);
 
-
+        if(WdfUsbPipeTypeInterrupt == pipeInfo.PipeType) {
+            TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTL,
+                    "Interrupt Pipe is 0x%p\n", pipe);
+            pDeviceContext->InterruptPipe = pipe;
+        }
 
         if(WdfUsbPipeTypeBulk == pipeInfo.PipeType &&
                 WdfUsbTargetPipeIsInEndpoint(pipe)) {
@@ -873,10 +938,10 @@ Return Value:
     }
 
     //
-    // If we didn't find all the 2 pipes, fail the start.
+    // If we didn't find all the 3 pipes, fail the start.
     //
     if(!(pDeviceContext->BulkWritePipe
-             && pDeviceContext->BulkReadPipe)) {
+            && pDeviceContext->BulkReadPipe && pDeviceContext->InterruptPipe)) {
         status = STATUS_INVALID_DEVICE_STATE;
         TraceEvents(TRACE_LEVEL_ERROR, DBG_PNP,
                             "Device is not configured properly %!STATUS!\n",
