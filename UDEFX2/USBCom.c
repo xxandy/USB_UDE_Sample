@@ -20,13 +20,16 @@ Abstract:
 
 
 
+typedef struct _ENDPOINTQUEUE_CONTEXT {
+    UDECXUSBDEVICE usbDeviceObj;
+} ENDPOINTQUEUE_CONTEXT, *PENDPOINTQUEUE_CONTEXT;
 
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(ENDPOINTQUEUE_CONTEXT, GetEndpointQueueContext);
 
 
 NTSTATUS
 Io_AllocateContext(
-    _In_
-    WDFDEVICE Object
+    _In_ UDECXUSBDEVICE Object
 )
 /*++
 
@@ -273,8 +276,11 @@ IoFakeTimerIntr(
 
     PIO_CONTEXT pIoContext;
     DEVICE_INTR_FLAGS n;
+    PENDPOINTQUEUE_CONTEXT pEpQContext;
 
-    WDFDEVICE device = WdfTimerGetParentObject(Timer);
+    pEpQContext = GetEndpointQueueContext(Timer);
+
+    UDECXUSBDEVICE device = pEpQContext->usbDeviceObj;
     pIoContext = WdfDeviceGetIoContext(device);
 
 
@@ -341,10 +347,9 @@ exit:
 
 NTSTATUS
 Io_RaiseInterrupt(
-    _In_ WDFDEVICE         Device,
+    _In_ UDECXUSBDEVICE    Device,
     _In_ DEVICE_INTR_FLAGS LatestStatus )
 {
-    PUSB_CONTEXT pUsbContext;
     PIO_CONTEXT pIoContext;
     WDFREQUEST request;
     NTSTATUS status = STATUS_SUCCESS;
@@ -365,15 +370,19 @@ Io_RaiseInterrupt(
         }
         WdfSpinLockRelease(pIoContext->IntrState.sync);
 
-        pUsbContext = WdfDeviceGetUsbContext(Device); // TODO: shouldn't need this soon enough, when the context moves to the USB device
-        UdecxUsbDeviceSignalWake(pUsbContext->UDEFX2Device);
+        UdecxUsbDeviceSignalWake(Device);
     } else {
         IoCompletePendingRequest(request, LatestStatus);
-        if (((++_Test_rebound) % 2) != 0)
-        {
-            pIoContext->FakeNextValue = 0x3311;
-            WdfTimerStart(pIoContext->FakeIntrTimer, WDF_REL_TIMEOUT_IN_SEC(4));
+
+
+        // ----------------- Test Code ----------------
+        if (((++_Test_rebound) % 2) != 0)   {
+            if ( !(pIoContext->bStopping) ) {
+                pIoContext->FakeNextValue = 0x3311;
+                WdfTimerStart(pIoContext->FakeIntrTimer, WDF_REL_TIMEOUT_IN_SEC(4));
+            }
         }
+        // --------------------------------------
     }
 
     return status;
@@ -391,9 +400,11 @@ IoEvtInterruptInUrb(
 )
 {
     PIO_CONTEXT pIoContext;
-    WDFDEVICE tgtDevice;
+    UDECXUSBDEVICE tgtDevice;
     NTSTATUS status = STATUS_SUCCESS;
     DEVICE_INTR_FLAGS LatestStatus = 0;
+    PENDPOINTQUEUE_CONTEXT pEpQContext;
+
     BOOLEAN bHasData = FALSE;
 
     UNREFERENCED_PARAMETER(Request);
@@ -401,7 +412,10 @@ IoEvtInterruptInUrb(
     UNREFERENCED_PARAMETER(InputBufferLength);
 
 
-    tgtDevice = WdfIoQueueGetDevice(Queue);
+    pEpQContext = GetEndpointQueueContext(Queue);
+
+    tgtDevice = pEpQContext->usbDeviceObj;
+
     pIoContext = WdfDeviceGetIoContext(tgtDevice);
 
 
@@ -426,11 +440,15 @@ IoEvtInterruptInUrb(
     if (bHasData)  {
 
         IoCompletePendingRequest(Request, LatestStatus);
-        if (((++_Test_rebound) % 2) != 0)
-        {
-            pIoContext->FakeNextValue = 0x3323;
-            WdfTimerStart(pIoContext->FakeIntrTimer, WDF_REL_TIMEOUT_IN_SEC(4));
+
+        // ------------- Test code -------------
+        if (((++_Test_rebound) % 2) != 0)  {
+            if ( !(pIoContext->bStopping) ) {
+                pIoContext->FakeNextValue = 0x3323;
+                WdfTimerStart(pIoContext->FakeIntrTimer, WDF_REL_TIMEOUT_IN_SEC(4));
+            }
         }
+        // --------------------------------
 
     } else {
 
@@ -451,13 +469,15 @@ exit:
 
 static NTSTATUS
 Io_CreateDeferredIntrQueue(
-    _In_ WDFDEVICE  Device,
+    _In_ WDFDEVICE   ControllerDevice,
+    _In_ UDECXUSBDEVICE ChildDevice,
     _In_ PIO_CONTEXT pIoContext )
 {
     NTSTATUS status;
 
     WDF_TIMER_CONFIG  timerConfig;
     WDF_OBJECT_ATTRIBUTES  timerAttributes;
+    PENDPOINTQUEUE_CONTEXT pEpQContext;
 
     WDF_IO_QUEUE_CONFIG queueConfig;
 
@@ -480,7 +500,7 @@ Io_CreateDeferredIntrQueue(
     //
     queueConfig.PowerManaged = WdfFalse;
 
-    status = WdfIoQueueCreate(Device,
+    status = WdfIoQueueCreate(ControllerDevice,
         &queueConfig,
         WDF_NO_OBJECT_ATTRIBUTES,
         &(pIoContext->IntrDeferredQueue)
@@ -501,6 +521,8 @@ Io_CreateDeferredIntrQueue(
         goto Error;
     }
 
+
+    // ------------- Test code -------------
     WDF_TIMER_CONFIG_INIT(
         &timerConfig,
         IoFakeTimerIntr
@@ -508,7 +530,8 @@ Io_CreateDeferredIntrQueue(
 
     timerConfig.AutomaticSerialization = TRUE;
     WDF_OBJECT_ATTRIBUTES_INIT(&timerAttributes);
-    timerAttributes.ParentObject = Device;
+    WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&timerAttributes, ENDPOINTQUEUE_CONTEXT);
+    timerAttributes.ParentObject = ControllerDevice;
 
     status = WdfTimerCreate(
         &timerConfig,
@@ -521,7 +544,9 @@ Io_CreateDeferredIntrQueue(
         goto Error;
     }
 
-
+    pEpQContext = GetEndpointQueueContext(pIoContext->FakeIntrTimer);
+    pEpQContext->usbDeviceObj = ChildDevice;
+    // ---------------------------------------
 
 
 Error:
@@ -531,7 +556,7 @@ Error:
 
 NTSTATUS
 Io_DeviceSlept(
-    _In_ WDFDEVICE  Device
+    _In_ UDECXUSBDEVICE  Device
 )
 {
     PIO_CONTEXT pIoContext;
@@ -541,8 +566,12 @@ Io_DeviceSlept(
     LogInfo(TRACE_DEVICE, "About to purge deferred request queue" );
     WdfIoQueuePurge(pIoContext->IntrDeferredQueue, NULL, NULL);
 
-    pIoContext->FakeNextValue = 0x8891;
-    WdfTimerStart(pIoContext->FakeIntrTimer, WDF_REL_TIMEOUT_IN_SEC(15));
+    /// ---------- Test Code  -------------
+    if ( !(pIoContext->bStopping) ) {
+        pIoContext->FakeNextValue = 0x8891;
+        WdfTimerStart(pIoContext->FakeIntrTimer, WDF_REL_TIMEOUT_IN_SEC(15));
+    }
+    //-----------------------------------
 
     return STATUS_SUCCESS;
 }
@@ -550,7 +579,7 @@ Io_DeviceSlept(
 
 NTSTATUS
 Io_DeviceWokeUp(
-    _In_ WDFDEVICE  Device
+    _In_ UDECXUSBDEVICE  Device
 )
 {
     PIO_CONTEXT pIoContext;
@@ -566,19 +595,25 @@ Io_DeviceWokeUp(
 
 NTSTATUS
 Io_RetrieveEpQueue(
-    _In_ WDFDEVICE  Device,
-    _In_ UCHAR      EpAddr,
-    _Out_ WDFQUEUE * Queue
+    _In_ UDECXUSBDEVICE  Device,
+    _In_ UCHAR           EpAddr,
+    _Out_ WDFQUEUE     * Queue
 )
 {
     NTSTATUS status;
     PIO_CONTEXT pIoContext;
+    PUSB_CONTEXT pUsbContext;
     WDF_IO_QUEUE_CONFIG queueConfig;
+    WDFDEVICE wdfController;
     WDFQUEUE *pQueueRecord = NULL;
+    WDF_OBJECT_ATTRIBUTES  attributes;
     PFN_WDF_IO_QUEUE_IO_INTERNAL_DEVICE_CONTROL pIoCallback = NULL;
 
     status = STATUS_SUCCESS;
     pIoContext = WdfDeviceGetIoContext(Device);
+    pUsbContext = GetUsbDeviceContext(Device);
+
+    wdfController = pUsbContext->ControllerDevice;
 
     switch (EpAddr)
     {
@@ -598,7 +633,7 @@ Io_RetrieveEpQueue(
         break;
 
     case g_InterruptEndpointAddress:
-        status = Io_CreateDeferredIntrQueue(Device, pIoContext);
+        status = Io_CreateDeferredIntrQueue(wdfController, Device, pIoContext);
         pQueueRecord = &(pIoContext->InterruptUrbQueue);
         pIoCallback = IoEvtInterruptInUrb;
         break;
@@ -616,16 +651,20 @@ Io_RetrieveEpQueue(
     }
 
     if ( (*pQueueRecord)  == NULL) {
-
+        PENDPOINTQUEUE_CONTEXT pEPQContext;
         WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchSequential);
 
         //Sequential must specify this callback
         queueConfig.EvtIoInternalDeviceControl = pIoCallback;
+        WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, ENDPOINTQUEUE_CONTEXT);
 
-        status = WdfIoQueueCreate(Device,
+        status = WdfIoQueueCreate(wdfController,
             &queueConfig,
-            WDF_NO_OBJECT_ATTRIBUTES,
+            &attributes,
             pQueueRecord);
+
+        pEPQContext = GetEndpointQueueContext(*pQueueRecord);
+        pEPQContext->usbDeviceObj = Device;
 
         if (!NT_SUCCESS(status)) {
 
@@ -641,6 +680,52 @@ exit:
     return status;
 }
 
+
+
+VOID
+Io_StopDeferredProcessing(
+    _In_ UDECXUSBDEVICE  Device,
+    _Out_ PIO_CONTEXT   pIoContextCopy
+)
+{
+    PIO_CONTEXT pIoContext = WdfDeviceGetIoContext(Device);
+
+    pIoContext->bStopping = TRUE;
+    // plus this queue will no longer accept incoming requests
+    WdfIoQueuePurgeSynchronously( pIoContext->IntrDeferredQueue);
+
+    // ----------- Test Code --------------
+    WdfTimerStop(pIoContext->FakeIntrTimer, TRUE);
+    // ---------------
+
+    (*pIoContextCopy) = (*pIoContext);
+}
+
+
+VOID
+Io_FreeEndpointQueues(
+    _In_ PIO_CONTEXT   pIoContext
+)
+{
+    // ----------- Test Code --------------
+    WdfObjectDelete(pIoContext->FakeIntrTimer);
+    // ---------------
+
+    WdfObjectDelete(pIoContext->IntrDeferredQueue);
+
+    WdfIoQueuePurgeSynchronously(pIoContext->ControlQueue);
+    WdfObjectDelete(pIoContext->ControlQueue);
+
+    WdfIoQueuePurgeSynchronously(pIoContext->InterruptUrbQueue);
+    WdfObjectDelete(pIoContext->InterruptUrbQueue);
+
+    WdfIoQueuePurgeSynchronously(pIoContext->BulkInQueue);
+    WdfObjectDelete(pIoContext->BulkInQueue);
+
+    WdfIoQueuePurgeSynchronously(pIoContext->BulkOutQueue);
+    WdfObjectDelete(pIoContext->BulkOutQueue);
+
+}
 
 
 

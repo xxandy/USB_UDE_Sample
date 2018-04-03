@@ -38,6 +38,7 @@ typedef struct _IO_CONTEXT {
     WDFQUEUE          BulkInQueue;
     WDFQUEUE          InterruptUrbQueue;
     WDFQUEUE          IntrDeferredQueue;
+    BOOLEAN           bStopping;
     
     /// --- testing
     WDFTIMER          FakeIntrTimer;
@@ -57,14 +58,14 @@ EXTERN_C_START
 
 NTSTATUS
 Io_AllocateContext(
-    _In_ WDFDEVICE Object
+    _In_ UDECXUSBDEVICE Object
 );
 
 
 
 NTSTATUS
 Io_RaiseInterrupt(
-    _In_ WDFDEVICE         Device,
+    _In_ UDECXUSBDEVICE    Device,
     _In_ DEVICE_INTR_FLAGS LatestStatus
 );
 
@@ -72,22 +73,37 @@ Io_RaiseInterrupt(
 
 NTSTATUS
 Io_RetrieveEpQueue(
-    _In_ WDFDEVICE  Device,
-    _In_ UCHAR      EpAddr,
-    _Out_ WDFQUEUE * Queue
+    _In_ UDECXUSBDEVICE  Device,
+    _In_ UCHAR           EpAddr,
+    _Out_ WDFQUEUE     * Queue
 );
+
+
+VOID
+Io_StopDeferredProcessing(
+    _In_ UDECXUSBDEVICE  Device,
+    _Out_ PIO_CONTEXT   pIoContextCopy
+);
+
+
+
+VOID
+Io_FreeEndpointQueues(
+    _In_ PIO_CONTEXT   pIoContext
+);
+
 
 
 
 NTSTATUS
 Io_DeviceSlept(
-    _In_ WDFDEVICE  Device
+    _In_ UDECXUSBDEVICE  Device
 );
 
 
 NTSTATUS
 Io_DeviceWokeUp(
-    _In_ WDFDEVICE  Device
+    _In_ UDECXUSBDEVICE  Device
 );
 
 EXTERN_C_END

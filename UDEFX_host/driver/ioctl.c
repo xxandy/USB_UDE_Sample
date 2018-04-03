@@ -544,7 +544,10 @@ Return Value:
         }
         else { // overwrite any existing status and bump the count
             pDevContext->InterruptStatus.latestStatus = NewDeviceFlags;
-            ++(pDevContext->InterruptStatus.numUnreadUpdates);
+            if ((pDevContext->InterruptStatus.numUnreadUpdates) < MAX_CACHED_INTR_UPDATES) // prevent wrap-around
+            {
+                ++(pDevContext->InterruptStatus.numUnreadUpdates);
+            }
         }
     }
     else if( ReaderStatus != STATUS_CANCELLED ) { // error or termination

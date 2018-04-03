@@ -34,14 +34,20 @@ EXTERN_C_START
 // a WDM device extension in the driver frameworks
 //
 
-typedef struct _WDFDEVICE_CONTEXT {
 
-	LIST_ENTRY ControllerListEntry;
-	KEVENT ResetCompleteEvent;
-	BOOLEAN AllowOnlyResetInterrupts;
-	WDFQUEUE DefaultQueue;
+// controller context 
+typedef struct _UDECX_USBCONTROLLER_CONTEXT {
+    LIST_ENTRY ControllerListEntry;
+    KEVENT ResetCompleteEvent;
+    BOOLEAN AllowOnlyResetInterrupts;
+    WDFQUEUE DefaultQueue;
 
-} WDFDEVICE_CONTEXT, *PWDFDEVICE_CONTEXT;
+    PUDECXUSBDEVICE_INIT  ChildDeviceInit;
+    UDECXUSBDEVICE        ChildDevice;
+} UDECX_USBCONTROLLER_CONTEXT, *PUDECX_USBCONTROLLER_CONTEXT;
+
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(UDECX_USBCONTROLLER_CONTEXT, GetUsbControllerContext);
+
 
 typedef struct _REQUEST_CONTEXT {
 	UINT32 unused;
@@ -65,12 +71,6 @@ typedef struct _BUFFER_CONTENT
 
 
 
-//
-// This macro will generate an inline function called DeviceGetContext
-// which will be used to get a pointer to the device context memory
-// in a type safe manner.
-//
-WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(WDFDEVICE_CONTEXT, WdfDeviceGetContext)
 
 //
 // Function to initialize the device and its callbacks

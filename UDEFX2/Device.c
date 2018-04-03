@@ -52,9 +52,9 @@ Return Value:
 	WDF_PNPPOWER_EVENT_CALLBACKS        wdfPnpPowerCallbacks;
 	WDF_OBJECT_ATTRIBUTES               wdfDeviceAttributes;
 	WDF_OBJECT_ATTRIBUTES               wdfRequestAttributes;
-	UDECX_WDF_DEVICE_CONFIG               controllerConfig;
+	UDECX_WDF_DEVICE_CONFIG             controllerConfig;
 	WDF_FILEOBJECT_CONFIG               fileConfig;
-	PWDFDEVICE_CONTEXT                  pControllerContext;
+    PUDECX_USBCONTROLLER_CONTEXT        pControllerContext;
 	WDF_IO_QUEUE_CONFIG                 defaultQueueConfig;
 	WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS
 		idleSettings;
@@ -120,7 +120,7 @@ Return Value:
 		goto exit;
 	}
 
-	WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&wdfDeviceAttributes, WDFDEVICE_CONTEXT);
+	WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&wdfDeviceAttributes, UDECX_USBCONTROLLER_CONTEXT);
 	wdfDeviceAttributes.EvtCleanupCallback = ControllerWdfEvtCleanupCallback;
 
 	//
@@ -161,7 +161,7 @@ Return Value:
 	// Initialize controller data members.
 	// TODO: reset using UCX?
 	//
-	pControllerContext = WdfDeviceGetContext(wdfDevice);
+	pControllerContext = GetUsbControllerContext(wdfDevice);
 	KeInitializeEvent(&pControllerContext->ResetCompleteEvent,
 		NotificationEvent,
 		FALSE /* initial state: not signaled */);
@@ -394,10 +394,10 @@ ControllerWdfEvtDeviceD0Entry(
 )
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	PWDFDEVICE_CONTEXT pControllerContext;
+    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
 
 	FuncEntry(TRACE_DEVICE);
-	pControllerContext = WdfDeviceGetContext(WdfDevice);
+	pControllerContext = GetUsbControllerContext(WdfDevice);
 
 	if (PreviousState == WdfPowerDeviceD3Final) {
 
@@ -452,10 +452,8 @@ ControllerWdfEvtDeviceD0ExitPreInterruptsDisabled(
 
 NTSTATUS
 ControllerWdfEvtDeviceD0Exit(
-	_In_
-	WDFDEVICE              WdfDevice,
-	_In_
-	WDF_POWER_DEVICE_STATE TargetState
+	_In_ WDFDEVICE              WdfDevice,
+	_In_ WDF_POWER_DEVICE_STATE TargetState
 )
 {
 	FuncEntry(TRACE_DEVICE);
@@ -489,8 +487,7 @@ ControllerWdfEvtDeviceReleaseHardware(
 
 VOID
 ControllerWdfEvtCleanupCallback(
-	_In_
-	WDFOBJECT   WdfDevice
+	_In_ WDFOBJECT   WdfDevice
 )
 {
 	UNREFERENCED_PARAMETER(WdfDevice);

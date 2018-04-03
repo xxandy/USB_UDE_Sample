@@ -82,6 +82,8 @@ extern const __declspec(selectany) LONGLONG DEFAULT_CONTROL_TRANSFER_TIMEOUT = 5
 // Data that the device reports via interrupts
 //
 
+// if we decide to queue incoming updates, this will be a limit
+#define MAX_CACHED_INTR_UPDATES 100
 
 typedef struct _DEVICE_INTR_STATE {
     DEVICE_INTR_FLAGS latestStatus;

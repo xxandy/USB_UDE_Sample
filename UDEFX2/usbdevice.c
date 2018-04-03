@@ -145,49 +145,6 @@ UsbValidateConstants(
 
 
 
-static  NTSTATUS
-Usb_AllocateContext(
-    _In_
-    WDFDEVICE Object
-)
-/*++
-
-Routine Description:
-
-Object context allocation helper
-
-Arguments:
-
-Object - WDF object upon which to allocate the new context
-
-Return value:
-
-NTSTATUS. Could fail on allocation failure or the same context type already exists on the object
-
---*/
-{
-    NTSTATUS status;
-    WDF_OBJECT_ATTRIBUTES attributes;
-
-    WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, USB_CONTEXT);
-
-    status = WdfObjectAllocateContext(Object, &attributes, NULL);
-
-    if (!NT_SUCCESS(status)) {
-
-        LogError(TRACE_DEVICE, "Unable to allocate new context for WDF object %p", Object);
-        goto exit;
-    }
-
-exit:
-
-    return status;
-}
-
-
-
-
-
 
 NTSTATUS
 Usb_Initialize(
@@ -195,7 +152,7 @@ Usb_Initialize(
 )
 {
     NTSTATUS                                status;
-    PUSB_CONTEXT                            usbContext;
+    PUDECX_USBCONTROLLER_CONTEXT            controllerContext;
     UDECX_USB_DEVICE_STATE_CHANGE_CALLBACKS   callbacks;
 
 
@@ -204,32 +161,15 @@ Usb_Initialize(
     // Allocate per-controller private contexts used by other source code modules (I/O,
     // etc.)
     //
-    status = Io_AllocateContext(WdfDevice);
-
-    if (!NT_SUCCESS(status)) {
-
-        goto exit;
-    }
 
 
-
-
-
-    status = Usb_AllocateContext(WdfDevice);
-
-    if (!NT_SUCCESS(status)) {
-
-        goto exit;
-    }
-
-
-    usbContext = WdfDeviceGetUsbContext(WdfDevice);
+    controllerContext = GetUsbControllerContext(WdfDevice);
 
     UsbValidateConstants();
 
-    usbContext->UdecxUsbDeviceInit = UdecxUsbDeviceInitAllocate(WdfDevice);
+    controllerContext->ChildDeviceInit = UdecxUsbDeviceInitAllocate(WdfDevice);
 
-    if (usbContext->UdecxUsbDeviceInit == NULL) {
+    if (controllerContext->ChildDeviceInit == NULL) {
 
         status = STATUS_INSUFFICIENT_RESOURCES;
         LogError(TRACE_DEVICE, "Failed to allocate UDECXUSBDEVICE_INIT %!STATUS!", status);
@@ -245,19 +185,19 @@ Usb_Initialize(
     callbacks.EvtUsbDeviceLinkPowerExit = UsbDevice_EvtUsbDeviceLinkPowerExit;
     callbacks.EvtUsbDeviceSetFunctionSuspendAndWake = UsbDevice_EvtUsbDeviceSetFunctionSuspendAndWake;
 
-    UdecxUsbDeviceInitSetStateChangeCallbacks(usbContext->UdecxUsbDeviceInit, &callbacks);
+    UdecxUsbDeviceInitSetStateChangeCallbacks(controllerContext->ChildDeviceInit, &callbacks);
 
     //
     // Set required attributes.
     //
-    UdecxUsbDeviceInitSetSpeed(usbContext->UdecxUsbDeviceInit, UdecxUsbHighSpeed);
+    UdecxUsbDeviceInitSetSpeed(controllerContext->ChildDeviceInit, UdecxUsbHighSpeed);
 
-    UdecxUsbDeviceInitSetEndpointsType(usbContext->UdecxUsbDeviceInit, UdecxEndpointTypeSimple);
+    UdecxUsbDeviceInitSetEndpointsType(controllerContext->ChildDeviceInit, UdecxEndpointTypeSimple);
 
     //
     // Device descriptor
     //
-    status = UdecxUsbDeviceInitAddDescriptor(usbContext->UdecxUsbDeviceInit,
+    status = UdecxUsbDeviceInitAddDescriptor(controllerContext->ChildDeviceInit,
         (PUCHAR)g_UsbDeviceDescriptor,
         sizeof(g_UsbDeviceDescriptor));
 
@@ -270,7 +210,7 @@ Usb_Initialize(
     //
     // String descriptors
     //
-    status = UdecxUsbDeviceInitAddDescriptorWithIndex(usbContext->UdecxUsbDeviceInit,
+    status = UdecxUsbDeviceInitAddDescriptorWithIndex(controllerContext->ChildDeviceInit,
         (PUCHAR)g_LanguageDescriptor,
         sizeof(g_LanguageDescriptor),
         0);
@@ -280,7 +220,7 @@ Usb_Initialize(
         goto exit;
     }
 
-    status = UdecxUsbDeviceInitAddStringDescriptor(usbContext->UdecxUsbDeviceInit,
+    status = UdecxUsbDeviceInitAddStringDescriptor(controllerContext->ChildDeviceInit,
         &g_ManufacturerStringEnUs,
         g_ManufacturerIndex,
         AMERICAN_ENGLISH);
@@ -290,7 +230,7 @@ Usb_Initialize(
         goto exit;
     }
 
-    status = UdecxUsbDeviceInitAddStringDescriptor(usbContext->UdecxUsbDeviceInit,
+    status = UdecxUsbDeviceInitAddStringDescriptor(controllerContext->ChildDeviceInit,
         &g_ProductStringEnUs,
         g_ProductIndex,
         AMERICAN_ENGLISH);
@@ -320,18 +260,17 @@ exit:
 
 NTSTATUS
 Usb_ReadDescriptorsAndPlugIn(
-    _In_
-    WDFDEVICE WdfDevice
+    _In_ WDFDEVICE WdfControllerDevice
 )
 {
-    NTSTATUS                        status;
-    PUSB_CONTEXT                    usbContext;
-    PUSB_CONFIGURATION_DESCRIPTOR   pComputedConfigDescSet;
-    WDF_OBJECT_ATTRIBUTES           attributes;
-    PUDECX_USBDEVICE_CONTEXT          deviceContext;
+    NTSTATUS                          status;
+    PUSB_CONFIGURATION_DESCRIPTOR     pComputedConfigDescSet;
+    WDF_OBJECT_ATTRIBUTES             attributes;
+    PUDECX_USBCONTROLLER_CONTEXT      controllerContext;
+    PUSB_CONTEXT                      deviceContext = NULL;
     UDECX_USB_DEVICE_PLUG_IN_OPTIONS  pluginOptions;
 
-    usbContext = WdfDeviceGetUsbContext(WdfDevice);
+    controllerContext = GetUsbControllerContext(WdfControllerDevice);
     pComputedConfigDescSet = NULL;
 
     //
@@ -352,7 +291,7 @@ Usb_ReadDescriptorsAndPlugIn(
         g_UsbConfigDescriptorSet,
         sizeof(g_UsbConfigDescriptorSet));
 
-    status = UdecxUsbDeviceInitAddDescriptor(usbContext->UdecxUsbDeviceInit,
+    status = UdecxUsbDeviceInitAddDescriptor(controllerContext->ChildDeviceInit,
         (PUCHAR)pComputedConfigDescSet,
         sizeof(g_UsbConfigDescriptorSet));
 
@@ -366,57 +305,69 @@ Usb_ReadDescriptorsAndPlugIn(
     //
     // Create emulated USB device
     //
-    WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, UDECX_USBDEVICE_CONTEXT);
+    WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, USB_CONTEXT);
 
-    status = UdecxUsbDeviceCreate(&usbContext->UdecxUsbDeviceInit,
+    status = UdecxUsbDeviceCreate(&controllerContext->ChildDeviceInit,
         &attributes,
-        &usbContext->UDEFX2Device);
+        &(controllerContext->ChildDevice) );
 
     if (!NT_SUCCESS(status)) {
 
         goto exit;
     }
 
-    LogInfo(TRACE_DEVICE, "USB device created, WdfDevice=%p, UsbDevice=%p",
-        WdfDevice, usbContext->UDEFX2Device );
 
-    deviceContext = UdecxDeviceGetContext(usbContext->UDEFX2Device);
-    deviceContext->WdfDevice = WdfDevice;
-    usbContext->IsAwake = TRUE;  // for some strange reason, it starts out awake!
+    status = Io_AllocateContext(controllerContext->ChildDevice);
+    if (!NT_SUCCESS(status)) {
+
+        goto exit;
+    }
+
+
+    deviceContext = GetUsbDeviceContext(controllerContext->ChildDevice);
+
+    // create link to parent
+    deviceContext->ControllerDevice = WdfControllerDevice;
+
+
+    LogInfo(TRACE_DEVICE, "USB device created, controller=%p, UsbDevice=%p",
+        WdfControllerDevice, controllerContext->ChildDevice);
+
+    deviceContext->IsAwake = TRUE;  // for some strange reason, it starts out awake!
 
     //
     // Create static endpoints.
     //
-    status = UsbCreateEndpointObj(WdfDevice, 
+    status = UsbCreateEndpointObj(controllerContext->ChildDevice,
         USB_DEFAULT_ENDPOINT_ADDRESS,
-        &(usbContext->UDEFX2ControlEndpoint) );
+        &(deviceContext->UDEFX2ControlEndpoint) );
 
     if (!NT_SUCCESS(status)) {
 
         goto exit;
     }
 
-    status = UsbCreateEndpointObj(WdfDevice,
+    status = UsbCreateEndpointObj(controllerContext->ChildDevice,
         g_BulkOutEndpointAddress, 
-        &(usbContext->UDEFX2BulkOutEndpoint) );
+        &(deviceContext->UDEFX2BulkOutEndpoint) );
 
     if (!NT_SUCCESS(status)) {
 
         goto exit;
     }
 
-    status = UsbCreateEndpointObj(WdfDevice,
+    status = UsbCreateEndpointObj(controllerContext->ChildDevice,
         g_BulkInEndpointAddress,
-        &(usbContext->UDEFX2BulkInEndpoint));
+        &(deviceContext->UDEFX2BulkInEndpoint));
 
     if (!NT_SUCCESS(status)) {
 
         goto exit;
     }
 
-    status = UsbCreateEndpointObj(WdfDevice,
+    status = UsbCreateEndpointObj(controllerContext->ChildDevice,
         g_InterruptEndpointAddress,
-        &(usbContext->UDEFX2InterruptInEndpoint));
+        &(deviceContext->UDEFX2InterruptInEndpoint));
 
     if (!NT_SUCCESS(status)) {
 
@@ -428,7 +379,10 @@ Usb_ReadDescriptorsAndPlugIn(
     //
     UDECX_USB_DEVICE_PLUG_IN_OPTIONS_INIT(&pluginOptions);
     pluginOptions.Usb20PortNumber = 1;
-    status = UdecxUsbDevicePlugIn(usbContext->UDEFX2Device, &pluginOptions);
+    status = UdecxUsbDevicePlugIn(controllerContext->ChildDevice, &pluginOptions);
+
+
+    LogInfo(TRACE_DEVICE, "Usb_ReadDescriptorsAndPlugIn ends successfully");
 
 exit:
 
@@ -446,22 +400,31 @@ exit:
 
 NTSTATUS
 Usb_Disconnect(
-    _In_
-    WDFDEVICE WdfDevice
+    _In_  WDFDEVICE WdfDevice
 )
 {
     NTSTATUS status;
-    PUSB_CONTEXT pUsbContext;
+    PUDECX_USBCONTROLLER_CONTEXT controllerCtx;
+    IO_CONTEXT ioContextCopy;
 
 
-    pUsbContext = WdfDeviceGetUsbContext(WdfDevice);
+    controllerCtx = GetUsbControllerContext(WdfDevice);
 
-    status = UdecxUsbDevicePlugOutAndDelete(pUsbContext->UDEFX2Device);
+    Io_StopDeferredProcessing(controllerCtx->ChildDevice, &ioContextCopy);
+
+    status = UdecxUsbDevicePlugOutAndDelete(controllerCtx->ChildDevice);
+    // Not deleting the queues that belong to the controller, as this
+    // happens only in the last disconnect.  But if we were to connect again,
+    // we would need to do that as the queues would leak.
 
     if (!NT_SUCCESS(status)) {
-
+        LogError(TRACE_DEVICE, "UdecxUsbDevicePlugOutAndDelete failed with %!STATUS!", status);
         goto exit;
     }
+
+    Io_FreeEndpointQueues(&ioContextCopy);
+
+    LogInfo(TRACE_DEVICE, "Usb_Disconnect ends successfully");
 
 exit:
 
@@ -471,22 +434,22 @@ exit:
 
 VOID
 Usb_Destroy(
-    _In_
-    WDFDEVICE WdfDevice
+    _In_ WDFDEVICE WdfDevice
 )
 {
-    PUSB_CONTEXT pUsbContext;
+    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
 
-    pUsbContext = WdfDeviceGetUsbContext(WdfDevice);
+    pControllerContext = GetUsbControllerContext(WdfDevice);
 
     //
     // Free device init in case we didn't successfully create the device.
     //
-    if (pUsbContext != NULL && pUsbContext->UdecxUsbDeviceInit != NULL) {
+    if (pControllerContext != NULL && pControllerContext->ChildDeviceInit != NULL) {
 
-        UdecxUsbDeviceInitFree(pUsbContext->UdecxUsbDeviceInit);
-        pUsbContext->UdecxUsbDeviceInit = NULL;
+        UdecxUsbDeviceInitFree(pControllerContext->ChildDeviceInit);
+        pControllerContext->ChildDeviceInit = NULL;
     }
+    LogError(TRACE_DEVICE, "Usb_Destroy ends successfully");
 
     return;
 }
@@ -509,7 +472,7 @@ Usb_UdecxUsbEndpointEvtReset(
 
 NTSTATUS
 UsbCreateEndpointObj(
-    _In_   WDFDEVICE         WdfDevice,
+    _In_   UDECXUSBDEVICE    WdfUsbChildDevice,
     _In_   UCHAR             epAddr,
     _Out_  UDECXUSBENDPOINT *pNewEpObjAddr
 )
@@ -521,16 +484,16 @@ UsbCreateEndpointObj(
     PUDECXUSBENDPOINT_INIT        endpointInit;
 
 
-    pUsbContext = WdfDeviceGetUsbContext(WdfDevice);
+    pUsbContext = GetUsbDeviceContext(WdfUsbChildDevice);
     endpointInit = NULL;
 
-    status = Io_RetrieveEpQueue(WdfDevice, epAddr, &epQueue);
+    status = Io_RetrieveEpQueue(WdfUsbChildDevice, epAddr, &epQueue);
 
     if (!NT_SUCCESS(status)) {
         goto exit;
     }
 
-    endpointInit = UdecxUsbSimpleEndpointInitAllocate(pUsbContext->UDEFX2Device);
+    endpointInit = UdecxUsbSimpleEndpointInitAllocate(WdfUsbChildDevice);
 
     if (endpointInit == NULL) {
 
@@ -574,10 +537,8 @@ exit:
 
 VOID
 UsbEndpointReset(
-    _In_
-    UDECXUSBENDPOINT UdecxUsbEndpoint,
-    _In_
-    WDFREQUEST     Request
+    _In_ UDECXUSBENDPOINT UdecxUsbEndpoint,
+    _In_ WDFREQUEST     Request
 )
 {
     UNREFERENCED_PARAMETER(UdecxUsbEndpoint);
@@ -588,12 +549,9 @@ UsbEndpointReset(
 
 VOID
 UsbDevice_EvtUsbDeviceEndpointsConfigure(
-    _In_
-    UDECXUSBDEVICE                    UdecxUsbDevice,
-    _In_
-    WDFREQUEST                      Request,
-    _In_
-    PUDECX_ENDPOINTS_CONFIGURE_PARAMS Params
+    _In_ UDECXUSBDEVICE                    UdecxUsbDevice,
+    _In_ WDFREQUEST                        Request,
+    _In_ PUDECX_ENDPOINTS_CONFIGURE_PARAMS Params
 )
 {
     UNREFERENCED_PARAMETER(UdecxUsbDevice);
@@ -608,10 +566,10 @@ UsbDevice_EvtUsbDeviceLinkPowerEntry(
     _In_ UDECXUSBDEVICE    UdecxUsbDevice )
 {
     PUSB_CONTEXT pUsbContext;
-    UNREFERENCED_PARAMETER(UdecxUsbDevice);
+    UNREFERENCED_PARAMETER(UdecxWdfDevice);
 
-    pUsbContext = WdfDeviceGetUsbContext(UdecxWdfDevice);
-    Io_DeviceWokeUp(UdecxWdfDevice); // TODO: when we fix context ownership, this should be UdecxUsbDevice
+    pUsbContext = GetUsbDeviceContext(UdecxUsbDevice);
+    Io_DeviceWokeUp(UdecxUsbDevice);
     pUsbContext->IsAwake = TRUE;
     LogInfo(TRACE_DEVICE, "USB Device power ENTRY");
 
@@ -625,14 +583,12 @@ UsbDevice_EvtUsbDeviceLinkPowerExit(
     _In_ UDECX_USB_DEVICE_WAKE_SETTING WakeSetting )
 {
     PUSB_CONTEXT pUsbContext;
-    UNREFERENCED_PARAMETER(UdecxUsbDevice);
-    UNREFERENCED_PARAMETER(WakeSetting);
     UNREFERENCED_PARAMETER(UdecxWdfDevice);
 
-    pUsbContext = WdfDeviceGetUsbContext(UdecxWdfDevice);
+    pUsbContext = GetUsbDeviceContext(UdecxUsbDevice);
     pUsbContext->IsAwake = FALSE;
 
-    Io_DeviceSlept(UdecxWdfDevice); // TODO: when we fix context ownership, this should be UdecxUsbDevice
+    Io_DeviceSlept(UdecxUsbDevice);
 
     LogInfo(TRACE_DEVICE, "USB Device power EXIT [wdfDev=%p, usbDev=%p], WakeSetting=%x", UdecxWdfDevice, UdecxUsbDevice, WakeSetting);
     return STATUS_SUCCESS;

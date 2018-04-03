@@ -25,27 +25,20 @@ Abstract:
 
 
 
-
+// device context
 typedef struct _USB_CONTEXT {
-
-	PUDECXUSBDEVICE_INIT  UdecxUsbDeviceInit;
-	UDECXUSBDEVICE        UDEFX2Device;
-	UDECXUSBENDPOINT      UDEFX2ControlEndpoint;
+    WDFDEVICE             ControllerDevice;
+    UDECXUSBENDPOINT      UDEFX2ControlEndpoint;
 	UDECXUSBENDPOINT      UDEFX2BulkOutEndpoint;
     UDECXUSBENDPOINT      UDEFX2BulkInEndpoint;
     UDECXUSBENDPOINT      UDEFX2InterruptInEndpoint;
     BOOLEAN               IsAwake;
 } USB_CONTEXT, *PUSB_CONTEXT;
 
-WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(USB_CONTEXT, WdfDeviceGetUsbContext);
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(USB_CONTEXT, GetUsbDeviceContext);
 
 
-typedef struct _UDECX_USBDEVICE_CONTEXT {
 
-	WDFDEVICE   WdfDevice;
-} UDECX_USBDEVICE_CONTEXT, *PUDECX_USBDEVICE_CONTEXT;
-
-WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(UDECX_USBDEVICE_CONTEXT, UdecxDeviceGetContext);
 
 
 
@@ -80,27 +73,23 @@ EXTERN_C_START
 
 NTSTATUS
 Usb_Initialize(
-	_In_
-	WDFDEVICE WdfDevice
+	_In_ WDFDEVICE WdfControllerDevice
 );
 
 
 NTSTATUS
 Usb_ReadDescriptorsAndPlugIn(
-	_In_
-	WDFDEVICE WdfDevice
+	_In_ WDFDEVICE WdfControllerDevice
 );
 
 NTSTATUS
 Usb_Disconnect(
-	_In_
-	WDFDEVICE WdfDevice
+	_In_ WDFDEVICE WdfDevice
 );
 
 VOID
 Usb_Destroy(
-	_In_
-	WDFDEVICE WdfDevice
+	_In_ WDFDEVICE WdfDevice
 );
 
 //
@@ -108,7 +97,7 @@ Usb_Destroy(
 //
 NTSTATUS
 UsbCreateEndpointObj(
-	_In_   WDFDEVICE         WdfDevice,
+	_In_   UDECXUSBDEVICE    WdfUsbChildDevice,
     _In_   UCHAR             epAddr,
     _Out_  UDECXUSBENDPOINT *pNewEpObjAddr
 );
