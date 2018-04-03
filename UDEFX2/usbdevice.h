@@ -34,6 +34,7 @@ typedef struct _USB_CONTEXT {
 	UDECXUSBENDPOINT      UDEFX2BulkOutEndpoint;
     UDECXUSBENDPOINT      UDEFX2BulkInEndpoint;
     UDECXUSBENDPOINT      UDEFX2InterruptInEndpoint;
+    BOOLEAN               IsAwake;
 } USB_CONTEXT, *PUSB_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(USB_CONTEXT, WdfDeviceGetUsbContext);

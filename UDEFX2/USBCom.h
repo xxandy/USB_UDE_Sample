@@ -29,6 +29,7 @@ typedef struct _IO_CONTEXT {
     WDFQUEUE BulkOutQueue;
     WDFQUEUE BulkInQueue;
     WDFQUEUE InterruptUrbQueue;
+    WDFQUEUE IntrDeferredQueue;
     WDFSPINLOCK InProgressLock;
 } IO_CONTEXT, *PIO_CONTEXT;
 
@@ -57,5 +58,15 @@ Io_RetrieveEpQueue(
 
 
 
+NTSTATUS
+Io_DeviceSlept(
+    _In_ WDFDEVICE  Device
+);
+
+
+NTSTATUS
+Io_DeviceWokeUp(
+    _In_ WDFDEVICE  Device
+);
 
 EXTERN_C_END

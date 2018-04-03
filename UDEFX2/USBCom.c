@@ -265,10 +265,23 @@ exit:
 
 static VOID
 IoEvtCancelInterruptInUrb(
+    IN WDFQUEUE Queue,
     IN WDFREQUEST  Request
 )
 {
-    LogError(TRACE_DEVICE, "Canceling request %p", Request);
+    UNREFERENCED_PARAMETER(Queue);
+    LogError(TRACE_DEVICE, "Canceling request A %p", Request);
+    UdecxUrbCompleteWithNtStatus(Request, STATUS_CANCELLED);
+}
+
+
+
+static VOID
+IoEvtCancelDirect(
+    IN WDFREQUEST  Request
+)
+{
+    LogError(TRACE_DEVICE, "Canceling request B %p", Request);
     UdecxUrbCompleteWithNtStatus(Request, STATUS_CANCELLED);
 }
 
@@ -282,20 +295,35 @@ IoEvtInterruptInUrb(
     _In_ ULONG IoControlCode
 )
 {
+    PIO_CONTEXT pIoContext;
+    WDFDEVICE tgtDevice;
     NTSTATUS status = STATUS_SUCCESS;
     PUCHAR transferBuffer;
     ULONG transferBufferLength;
     static int _s_serviceCtr = 0;
 
     UNREFERENCED_PARAMETER(Request);
-    UNREFERENCED_PARAMETER(Queue);
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
 
-    if ((++_s_serviceCtr) > 4)
+
+    tgtDevice = WdfIoQueueGetDevice(Queue);
+    pIoContext = WdfDeviceGetIoContext(tgtDevice);
+
+
+
+    if ( (++_s_serviceCtr) >= 4)
     {
-        LogError(TRACE_DEVICE, "Interrupt: marking + hanging %p to prevent tight loop", Request);
-        WdfRequestMarkCancelable(Request, IoEvtCancelInterruptInUrb);
+        LogError(TRACE_DEVICE, "Interrupt: dev %p marking + hanging %p to prevent tight loop", tgtDevice, Request);
+
+        status = WdfRequestForwardToIoQueue(Request, pIoContext->IntrDeferredQueue);
+        if (NT_SUCCESS(status)) {
+            LogInfo(TRACE_DEVICE, "Request %p forwarded for later", Request);
+        }
+        else {
+            LogError(TRACE_DEVICE, "ERROR: Unable to forward Request %p error %!STATUS!", Request, status);
+            WdfRequestMarkCancelable(Request, IoEvtCancelDirect);
+        }
         return;
     }
 
@@ -308,12 +336,14 @@ IoEvtInterruptInUrb(
         status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
         if (!NT_SUCCESS(status))
         {
-            LogError(TRACE_DEVICE, "WdfRequest %p unable to retrieve buffer %!STATUS!",
-                Request, status);
+            LogError(TRACE_DEVICE, "WdfRequest tgtDevice %p %p unable to retrieve buffer %!STATUS!",
+                tgtDevice, Request, status);
             goto exit;
         }
 
-        LogInfo(TRACE_DEVICE, "INTR ubx CODE %x, [outbuf=%d inbuf=%d], trlen=%d",
+        LogInfo(TRACE_DEVICE, "INTR ubx tgtDevice %p Req %p CODE %x, [outbuf=%d inbuf=%d], trlen=%d",
+            tgtDevice,
+            Request,
             IoControlCode,
             (ULONG)(OutputBufferLength),
             (ULONG)(InputBufferLength),
@@ -345,9 +375,77 @@ exit:
 }
 
 
+static NTSTATUS
+Io_CreateDeferredIntrQueue(
+    _In_ WDFDEVICE  Device,
+    _In_ PIO_CONTEXT pIoContext )
+{
+    NTSTATUS status;
+
+    WDF_IO_QUEUE_CONFIG queueConfig;
+    //
+    // Register a manual I/O queue for handling Interrupt Message Read Requests.
+    // This queue will be used for storing Requests that need to wait for an
+    // interrupt to occur before they can be completed.
+    //
+    WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
+
+    // when a request gets canceled, this is where we want to do the completion
+    queueConfig.EvtIoCanceledOnQueue = IoEvtCancelInterruptInUrb;
+
+    //
+    // We shouldn't have to power-manage this queue, as we will manually 
+    // purge it and de-queue from it whenever we get power indications.
+    //
+    queueConfig.PowerManaged = WdfFalse;
+
+    status = WdfIoQueueCreate(Device,
+        &queueConfig,
+        WDF_NO_OBJECT_ATTRIBUTES,
+        &(pIoContext->IntrDeferredQueue)
+    );
+
+    if (!NT_SUCCESS(status)) {
+        LogError(TRACE_DEVICE,
+            "WdfIoQueueCreate failed 0x%x\n", status);
+        goto Error;
+    }
+
+Error:
+    return status;
+}
 
 
+NTSTATUS
+Io_DeviceSlept(
+    _In_ WDFDEVICE  Device
+)
+{
+    PIO_CONTEXT pIoContext;
+    pIoContext = WdfDeviceGetIoContext(Device);
 
+    // thi will result in all current requests being canceled
+    LogInfo(TRACE_DEVICE, "About to purge deferred request queue" );
+    WdfIoQueuePurge(pIoContext->IntrDeferredQueue, NULL, NULL);
+
+    return STATUS_SUCCESS;
+}
+
+
+NTSTATUS
+Io_DeviceWokeUp(
+    _In_ WDFDEVICE  Device
+)
+{
+    PIO_CONTEXT pIoContext;
+    pIoContext = WdfDeviceGetIoContext(Device);
+
+    // thi will result in all current requests being canceled
+    LogInfo(TRACE_DEVICE, "About to re-start paused deferred queue");
+    WdfIoQueueStart(pIoContext->IntrDeferredQueue);
+
+    return STATUS_SUCCESS;
+}
 
 
 NTSTATUS
@@ -363,6 +461,7 @@ Io_RetrieveEpQueue(
     WDFQUEUE *pQueueRecord = NULL;
     PFN_WDF_IO_QUEUE_IO_INTERNAL_DEVICE_CONTROL pIoCallback = NULL;
 
+    status = STATUS_SUCCESS;
     pIoContext = WdfDeviceGetIoContext(Device);
 
     switch (EpAddr)
@@ -383,6 +482,7 @@ Io_RetrieveEpQueue(
         break;
 
     case g_InterruptEndpointAddress:
+        status = Io_CreateDeferredIntrQueue(Device, pIoContext);
         pQueueRecord = &(pIoContext->InterruptUrbQueue);
         pIoCallback = IoEvtInterruptInUrb;
         break;
@@ -394,8 +494,10 @@ Io_RetrieveEpQueue(
     }
 
 
-    status = STATUS_SUCCESS;
     *Queue = NULL;
+    if (!NT_SUCCESS(status)) {
+        goto exit;
+    }
 
     if ( (*pQueueRecord)  == NULL) {
 

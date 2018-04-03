@@ -191,8 +191,7 @@ exit:
 
 NTSTATUS
 Usb_Initialize(
-    _In_
-    WDFDEVICE WdfDevice
+    _In_ WDFDEVICE WdfDevice
 )
 {
     NTSTATUS                                status;
@@ -331,6 +330,7 @@ Usb_ReadDescriptorsAndPlugIn(
     WDF_OBJECT_ATTRIBUTES           attributes;
     PUDECX_USBDEVICE_CONTEXT          deviceContext;
     UDECX_USB_DEVICE_PLUG_IN_OPTIONS  pluginOptions;
+
     usbContext = WdfDeviceGetUsbContext(WdfDevice);
     pComputedConfigDescSet = NULL;
 
@@ -361,6 +361,8 @@ Usb_ReadDescriptorsAndPlugIn(
         goto exit;
     }
 
+    // TODO here:  add an interface and default  queue (experimental)
+
     //
     // Create emulated USB device
     //
@@ -375,8 +377,12 @@ Usb_ReadDescriptorsAndPlugIn(
         goto exit;
     }
 
+    LogInfo(TRACE_DEVICE, "USB device created, WdfDevice=%p, UsbDevice=%p",
+        WdfDevice, usbContext->UDEFX2Device );
+
     deviceContext = UdecxDeviceGetContext(usbContext->UDEFX2Device);
     deviceContext->WdfDevice = WdfDevice;
+    usbContext->IsAwake = TRUE;  // for some strange reason, it starts out awake!
 
     //
     // Create static endpoints.
@@ -598,51 +604,55 @@ UsbDevice_EvtUsbDeviceEndpointsConfigure(
 
 NTSTATUS
 UsbDevice_EvtUsbDeviceLinkPowerEntry(
-    _In_
-    WDFDEVICE       UdecxWdfDevice,
-    _In_
-    UDECXUSBDEVICE    UdecxUsbDevice
-)
+    _In_ WDFDEVICE       UdecxWdfDevice,
+    _In_ UDECXUSBDEVICE    UdecxUsbDevice )
 {
-    UNREFERENCED_PARAMETER(UdecxWdfDevice);
+    PUSB_CONTEXT pUsbContext;
     UNREFERENCED_PARAMETER(UdecxUsbDevice);
+
+    pUsbContext = WdfDeviceGetUsbContext(UdecxWdfDevice);
+    Io_DeviceWokeUp(UdecxWdfDevice); // TODO: when we fix context ownership, this should be UdecxUsbDevice
+    pUsbContext->IsAwake = TRUE;
+    LogInfo(TRACE_DEVICE, "USB Device power ENTRY");
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
 UsbDevice_EvtUsbDeviceLinkPowerExit(
-    _In_
-    WDFDEVICE                   UdecxWdfDevice,
-    _In_
-    UDECXUSBDEVICE                UdecxUsbDevice,
-    _In_
-    UDECX_USB_DEVICE_WAKE_SETTING WakeSetting
-)
+    _In_ WDFDEVICE UdecxWdfDevice,
+    _In_ UDECXUSBDEVICE UdecxUsbDevice,
+    _In_ UDECX_USB_DEVICE_WAKE_SETTING WakeSetting )
 {
-    UNREFERENCED_PARAMETER(UdecxWdfDevice);
+    PUSB_CONTEXT pUsbContext;
     UNREFERENCED_PARAMETER(UdecxUsbDevice);
     UNREFERENCED_PARAMETER(WakeSetting);
+    UNREFERENCED_PARAMETER(UdecxWdfDevice);
 
+    pUsbContext = WdfDeviceGetUsbContext(UdecxWdfDevice);
+    pUsbContext->IsAwake = FALSE;
+
+    Io_DeviceSlept(UdecxWdfDevice); // TODO: when we fix context ownership, this should be UdecxUsbDevice
+
+    LogInfo(TRACE_DEVICE, "USB Device power EXIT [wdfDev=%p, usbDev=%p], WakeSetting=%x", UdecxWdfDevice, UdecxUsbDevice, WakeSetting);
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
 UsbDevice_EvtUsbDeviceSetFunctionSuspendAndWake(
-    _In_
-    WDFDEVICE                      UdecxWdfDevice,
-    _In_
-    UDECXUSBDEVICE                   UdecxUsbDevice,
-    _In_
-    ULONG                          Interface,
-    _In_
-    UDECX_USB_DEVICE_FUNCTION_POWER  FunctionPower
+    _In_ WDFDEVICE                        UdecxWdfDevice,
+    _In_ UDECXUSBDEVICE                   UdecxUsbDevice,
+    _In_ ULONG                            Interface,
+    _In_ UDECX_USB_DEVICE_FUNCTION_POWER  FunctionPower
 )
 {
     UNREFERENCED_PARAMETER(UdecxWdfDevice);
     UNREFERENCED_PARAMETER(UdecxUsbDevice);
     UNREFERENCED_PARAMETER(Interface);
     UNREFERENCED_PARAMETER(FunctionPower);
+
+    // this never gets printed!
+    LogInfo(TRACE_DEVICE, "USB Device SuspendAwakeState=%x", FunctionPower );
 
     return STATUS_SUCCESS;
 }

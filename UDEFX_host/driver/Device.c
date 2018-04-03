@@ -152,6 +152,14 @@ Return Value:
 
     WdfDeviceSetPnpCapabilities(device, &pnpCaps);
 
+    status = WdfSpinLockCreate(WDF_NO_OBJECT_ATTRIBUTES,
+        &(pDevContext->InterruptStatus.sync));
+    if (!NT_SUCCESS(status)) {
+        TraceEvents(TRACE_LEVEL_ERROR, DBG_PNP,
+            "WdfSpinLockCreate failed  %!STATUS!\n", status);
+        goto Error;
+    }
+
     //
     // Create a parallel default queue and register an event callback to
     // receive ioctl requests. We will create separate queues for

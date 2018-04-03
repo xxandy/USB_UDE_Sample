@@ -86,6 +86,7 @@ extern const __declspec(selectany) LONGLONG DEFAULT_CONTROL_TRANSFER_TIMEOUT = 5
 typedef struct _DEVICE_INTR_STATE {
     DEVICE_INTR_FLAGS latestStatus;
     ULONG             numUnreadUpdates;
+    WDFSPINLOCK       sync;
 } DEVICE_INTR_STATE, *PDEVICE_INTR_STATE;
 
 

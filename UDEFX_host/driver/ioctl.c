@@ -160,7 +160,7 @@ Return Value:
             BOOLEAN bDataReady = FALSE;
             DEVICE_INTR_FLAGS newData = 0;
 
-            // TODO: spin lock around this check and transition
+            WdfSpinLockAcquire(pDevContext->InterruptStatus.sync);
             if (pDevContext->InterruptStatus.numUnreadUpdates > 0)
             {
                 // data is ready ahead of time, grab it
@@ -169,9 +169,13 @@ Return Value:
                 pDevContext->InterruptStatus.numUnreadUpdates = 0;
                 pDevContext->InterruptStatus.latestStatus = 0;
             }
+            WdfSpinLockRelease(pDevContext->InterruptStatus.sync);
 
             if (bDataReady)
             {
+                TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTL,
+                    "Completing pending request IMMEDIATELY %p\n", Request);
+
                 // complete immediately - does not need to traverse the queue
                 OsrCompleteInterruptRequest(Request, STATUS_SUCCESS, newData);
                 defaultCompletionNeeded = FALSE;
@@ -183,9 +187,15 @@ Return Value:
                 // the request until an interrupt from the USB device occurs.
                 // Note that WDK will automatically cancel this request if needed.
                 //
+
                 status = WdfRequestForwardToIoQueue(Request, pDevContext->InterruptMsgQueue);
                 if (NT_SUCCESS(status)) {
+                    TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTL,
+                        "Deferred pending request %p\n", Request);
                     defaultCompletionNeeded = FALSE;
+                } else {
+                    TraceEvents(TRACE_LEVEL_ERROR, DBG_IOCTL,
+                        "ERROR: Unable to defer request %p, error %x\n", Request, status);
                 }
             }
         }
@@ -525,7 +535,7 @@ Return Value:
     // Check if there are any pending requests in the Interrupt Message Queue.
     status = WdfIoQueueRetrieveNextRequest(pDevContext->InterruptMsgQueue, &request);
 
-    // TODO: spin lock around this check and transition
+    WdfSpinLockAcquire(pDevContext->InterruptStatus.sync);
     if (NT_SUCCESS(ReaderStatus)) { // new data produced
         if (NT_SUCCESS(status)) { // and there's at least one waiter
             // clear the data, as it will be consumed by this waiter right down below
@@ -542,9 +552,13 @@ Return Value:
         pDevContext->InterruptStatus.latestStatus = 0;
         pDevContext->InterruptStatus.numUnreadUpdates = 0;
     }
+    WdfSpinLockRelease(pDevContext->InterruptStatus.sync);
 
     // we will unconditionally empty the queue
     while( NT_SUCCESS(status) )  {
+        TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTL,
+            "Completing previously pending request %p\n", request);
+
         OsrCompleteInterruptRequest(request, ReaderStatus, NewDeviceFlags);
         request = NULL;
 
