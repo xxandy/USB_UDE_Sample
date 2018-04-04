@@ -300,7 +300,6 @@ Usb_ReadDescriptorsAndPlugIn(
         goto exit;
     }
 
-    // TODO here:  add an interface and default  queue (experimental)
 
     //
     // Create emulated USB device

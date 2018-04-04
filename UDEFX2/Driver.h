@@ -24,7 +24,6 @@ Environment:
 #include <usbioctl.h>
 
 #include "device.h"
-#include "queue.h"
 #include "trace.h"
 
 

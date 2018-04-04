@@ -41,7 +41,6 @@
     <ClCompile Include="Device.c" />
     <ClCompile Include="Driver.c" />
     <ClCompile Include="Misc.c" />
-    <ClCompile Include="Queue.c" />
     <ClCompile Include="USBCom.c" />
     <ClCompile Include="usbdevice.c" />
   </ItemGroup>
@@ -50,7 +49,6 @@
     <ClInclude Include="Driver.h" />
     <ClInclude Include="Misc.h" />
     <ClInclude Include="Public.h" />
-    <ClInclude Include="Queue.h" />
     <ClInclude Include="Trace.h" />
     <ClInclude Include="USBCom.h" />
     <ClInclude Include="usbdevice.h" />
