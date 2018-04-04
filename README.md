@@ -19,7 +19,7 @@ To build the drivers, you need:
 * The WDK, along with the WDK extension for Visual Studio
 
 To install the drivers, have all the sys/inf/cat files that result from the build on a single directory, and run this command from an Administrator DOS prompt:
-* installem.bat
+* <B>installem.bat</B>
 (you'll need to have your system in Test Mode, as the drivers aren't signed)
 
 To watch the driver behavior, you can use these scripts:
