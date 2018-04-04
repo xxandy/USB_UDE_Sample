@@ -12,7 +12,7 @@ The Kernel mode drivers are:
 UDEFX2.sys defines these endpoints:
 * <B>a BULK/IN endpoint</B>:  generates pattern data when read.
 * <B>a BULK/OUT endpoint</B>: traces incoming data for confirmation.
-* <B>an INTERRUPT/IN endpoint</B>:  currently generates an test interrupt 15 seconds after the device goes to sleep, and another 5 seconds after every other completion (in practice, these look like randomly-timed interrupts, to simulate both the case of Remote Wakeup and the case when interrupts are generated with the device still awake).
+* <B>an INTERRUPT/IN endpoint</B>:  Upon request from a back-channel controller test app (via a back-channel IOCTL), generates an interrupt from the device. Interrupt also generates Remote Wakeup if the virtual device is in low-power mode.
 
 To build the drivers, you need:
 * Visual Studio 2017
@@ -32,7 +32,8 @@ It is especially instructional to watch the traces during install/uninstall of t
 Once the drivers are installed, you can test them with the test app, which is also stoken from the WDK sample and modified.  It can be used in 3 ways:
 * *osrusbfx2.exe -w 20*   (writes 20 bytes to BULK/OUT - the trace shows a dump of what is written )
 * *osrusbfx2.exe -v -r 20*   (reads 20 bytes from BULK/IN, dumps result to screen)
-* *osrusbfx2.exe -p*  (waits for an interrupt, which is generated every ~30 ish - see INTERRUPT/IN endpoint description above)
+* *osrusbfx2.exe -i abc* (generates an INTERRUPT/IN transfer with a 4-byte little-endian payload matching the hexadecimal parameter provided)
+* *osrusbfx2.exe -p*  (waits for an interrupt, which can be generated in a separate instance of the test app, with the -i command - see INTERRUPT/IN endpoint description above)
 
 
 
