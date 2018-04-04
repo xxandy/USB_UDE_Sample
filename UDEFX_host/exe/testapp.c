@@ -41,6 +41,7 @@ _Analysis_mode_(_Analysis_code_type_user_code_)
 #include <basetyps.h>
 #include "usbdi.h"
 #include "public.h"
+#include "..\..\UDEFX2\public.h"
 
 #pragma warning(default:4200)
 #pragma warning(default:4201)
@@ -64,6 +65,8 @@ BOOL G_fPerformAsyncIo = FALSE;
 ULONG G_IterationCount = 1; //count of iterations of the test we are to perform
 ULONG G_WriteLen = 512;         // #bytes to write
 ULONG G_ReadLen = 512;          // #bytes to read
+BOOL G_fGenerateVirtualDeviceIntr = FALSE;
+DEVICE_INTR_FLAGS G_IntrValue = 0;
 
 BOOL
 DumpUsbConfig( // defined in dump.c
@@ -156,6 +159,63 @@ clean0:
     }
 
     return bRet;
+}
+
+
+
+_Check_return_
+_Ret_notnull_
+_Success_(return != INVALID_HANDLE_VALUE)
+HANDLE
+OpenVirtualController(
+)
+
+/*++
+Routine Description:
+
+Called by main() to open an instance of the virtual controller
+
+Arguments:
+
+Synchronous - TRUE, if Device is to be opened for synchronous access.
+FALSE, otherwise.
+
+Return Value:
+
+Device handle on success else INVALID_HANDLE_VALUE
+
+--*/
+
+{
+    HANDLE hDev;
+    WCHAR completeDeviceName[MAX_DEVPATH_LENGTH];
+
+    if (!GetDevicePath(
+        (LPGUID)&GUID_DEVINTERFACE_UDEFX2,
+        completeDeviceName,
+        sizeof(completeDeviceName) / sizeof(completeDeviceName[0])))
+    {
+        return  INVALID_HANDLE_VALUE;
+    }
+
+    printf("DeviceName = (%S)\n", completeDeviceName); fflush(stdout);
+
+    hDev = CreateFile(completeDeviceName,
+        GENERIC_WRITE | GENERIC_READ,
+        FILE_SHARE_WRITE | FILE_SHARE_READ,
+        NULL, // default security
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+
+    if (hDev == INVALID_HANDLE_VALUE) {
+        printf("Failed to open the virtual controller, error - %d", GetLastError()); fflush(stdout);
+    }
+    else {
+        printf("Opened the virtual controler successfully.\n"); fflush(stdout);
+    }
+
+    return hDev;
 }
 
 
@@ -253,6 +313,7 @@ Return Value:
     printf("-r [n] where n is number of bytes to read\n");
     printf("-w [n] where n is number of bytes to write\n");
     printf("-c [n] where n is number of iterations (default = 1)\n");
+    printf("-i [n] where n is an hex number to send as INTERRUPT/IN from virtual device\n");
     printf("-v verbose -- dumps read data\n");
     printf("-p receive device interrupt\n");
     printf("-a to perform asynchronous I/O\n");
@@ -337,6 +398,21 @@ Return Value:
             case 'P':
                 G_fGetDeviceInterrupt = TRUE;
                 break;
+
+            case 'i':
+            case 'I':
+                if (i + 1 >= argc) {
+                    Usage();
+                    exit(1);
+                }
+                else {
+                    G_IntrValue = strtol( &argv[i + 1][0], NULL, 16 );
+                }
+                i++;
+                G_fGenerateVirtualDeviceIntr = TRUE;
+                break;
+
+
             case 'a':
             case 'A':
                 G_fPerformAsyncIo = TRUE;
@@ -426,6 +502,65 @@ Return Value:
     }
     printf("\n****** END DUMP LEN decimal %d, 0x%x\n", len,len);
 }
+
+
+
+
+
+
+BOOL
+GenerateDeviceInterrupt(DEVICE_INTR_FLAGS value)
+{
+    HANDLE          deviceHandle;
+    DWORD           code;
+    ULONG           index = 0;
+    DEVICE_INTR_FLAGS  flagsState = 0;
+
+    printf("About to open device\n"); fflush(stdout);
+
+    deviceHandle = OpenVirtualController();
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find virtual controller device!\n"); fflush(stdout);
+
+        return FALSE;
+
+    }
+
+    printf("Device open, waiting for interrupt...\n"); fflush(stdout);
+
+    if (!DeviceIoControl(deviceHandle,
+        IOCTL_UDEFX2_GENERATE_INTERRUPT,
+        &value,                // Ptr to InBuffer
+        sizeof(value),         // Length of InBuffer
+        NULL,                  // Ptr to OutBuffer
+        0,                     // Length of OutBuffer
+        &index,                // BytesReturned
+        0)) {                  // Ptr to Overlapped structure
+
+        code = GetLastError();
+
+        printf("DeviceIoControl failed with error 0x%x\n", code);
+
+    }
+    else
+    {
+        printf("DeviceIoControl SUCCESS , returned 0x%x, bytes=%d\n", flagsState, index);
+    }
+
+    CloseHandle(deviceHandle);
+    return TRUE;
+}
+
+
+
+
+
+
+
+
+
 
 BOOL
 GetDeviceInterrupt()
@@ -684,6 +819,14 @@ Return Value:
         GetDeviceInterrupt();
         goto exit;
     }
+
+    if (G_fGenerateVirtualDeviceIntr)
+    {
+        printf("About to generate device interrupt\n"); fflush(stdout);
+        GenerateDeviceInterrupt(G_IntrValue);
+        goto exit;
+    }
+
 
     if (G_fPerformAsyncIo) {
         HANDLE  th1;

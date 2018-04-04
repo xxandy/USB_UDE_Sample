@@ -39,11 +39,6 @@ typedef struct _IO_CONTEXT {
     WDFQUEUE          InterruptUrbQueue;
     WDFQUEUE          IntrDeferredQueue;
     BOOLEAN           bStopping;
-    
-    /// --- testing
-    WDFTIMER          FakeIntrTimer;
-    DEVICE_INTR_FLAGS FakeNextValue;
-    // -- end testing
 
     DEVICE_INTR_STATE IntrState;
 } IO_CONTEXT, *PIO_CONTEXT;

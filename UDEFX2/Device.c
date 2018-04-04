@@ -17,6 +17,7 @@ Environment:
 #include "driver.h"
 #include "usbdevice.h"
 #include "Misc.h"
+#include "USBCom.h"
 
 #include <ntstrsafe.h>
 #include "device.tmh"
@@ -152,6 +153,18 @@ Return Value:
 		goto exit;
 	}
 
+
+    // create a 2nd interface for back-channel interaction with the controller
+    status = WdfDeviceCreateDeviceInterface(wdfDevice,
+        (LPGUID)&GUID_DEVINTERFACE_UDEFX2,
+        NULL);
+
+    if (!NT_SUCCESS(status)) {
+
+        LogError(TRACE_DEVICE, "WdfDeviceCreateDeviceInterface (backchannel) Failed %!STATUS!", status);
+        goto exit;
+    }
+
 	UDECX_WDF_DEVICE_CONFIG_INIT(&controllerConfig, ControllerEvtUdecxWdfDeviceQueryUsbCapability);
 
 	status = UdecxWdfDeviceAddUsbDeviceEmulation(wdfDevice,
@@ -159,8 +172,7 @@ Return Value:
 
 	//
 	// Initialize controller data members.
-	// TODO: reset using UCX?
-	//
+
 	pControllerContext = GetUsbControllerContext(wdfDevice);
 	KeInitializeEvent(&pControllerContext->ResetCompleteEvent,
 		NotificationEvent,
@@ -509,17 +521,66 @@ ControllerEvtIoDeviceControl(
 )
 {
 	BOOLEAN handled;
-	NTSTATUS status;
-	UNREFERENCED_PARAMETER(OutputBufferLength);
+    PDEVICE_INTR_FLAGS pflags = 0;
+    size_t pblen;
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFDEVICE ctrdevice = WdfIoQueueGetDevice(Queue);
+    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
+
+    
+    UNREFERENCED_PARAMETER(OutputBufferLength);
 	UNREFERENCED_PARAMETER(InputBufferLength);
 
 	handled = UdecxWdfDeviceTryHandleUserIoctl(WdfIoQueueGetDevice(Queue),
 		Request);
 
 	if (handled) {
-
 		goto exit;
 	}
+
+
+    pControllerContext = GetUsbControllerContext(ctrdevice);
+
+
+
+    switch (IoControlCode)
+    {
+    case IOCTL_UDEFX2_GENERATE_INTERRUPT:
+        status = WdfRequestRetrieveInputBuffer(Request,
+            sizeof(DEVICE_INTR_FLAGS),
+            &pflags,
+            &pblen);// BufferLength
+
+        if (!NT_SUCCESS(status))
+        {
+            TraceEvents(TRACE_LEVEL_ERROR,
+                TRACE_QUEUE,
+                "%!FUNC! Unable to retrieve input buffer");
+        }
+        else if (pblen == sizeof(DEVICE_INTR_FLAGS) && (pflags != NULL)) {
+            DEVICE_INTR_FLAGS flags;
+            memcpy(&flags, pflags, sizeof(DEVICE_INTR_FLAGS));
+            TraceEvents(TRACE_LEVEL_INFORMATION,
+                TRACE_QUEUE,
+                "%!FUNC! Will generate interrupt");
+            status = Io_RaiseInterrupt(pControllerContext->ChildDevice, flags);
+
+        }
+        else {
+            TraceEvents(TRACE_LEVEL_ERROR,
+                TRACE_QUEUE,
+                "%!FUNC! Invalid buffer size");
+            status = STATUS_INVALID_PARAMETER;
+        }
+        WdfRequestComplete(Request, status);
+        handled = TRUE;
+        break;
+    }
+
+    if (handled) {
+        goto exit;
+    }
+
 
 	status = STATUS_INVALID_DEVICE_REQUEST;
 	LogError(TRACE_DEVICE, "Unexpected I/O control code 0x%x %!STATUS!", IoControlCode, status);
