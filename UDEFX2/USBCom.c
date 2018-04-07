@@ -350,6 +350,7 @@ Io_RaiseInterrupt(
         WdfSpinLockRelease(pIoContext->IntrState.sync);
 
         UdecxUsbDeviceSignalWake(Device);
+        status = STATUS_SUCCESS;
     } else {
         IoCompletePendingRequest(request, LatestStatus);
     }

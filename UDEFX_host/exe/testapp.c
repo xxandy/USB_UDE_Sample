@@ -528,7 +528,7 @@ GenerateDeviceInterrupt(DEVICE_INTR_FLAGS value)
 
     }
 
-    printf("Device open, waiting for interrupt...\n"); fflush(stdout);
+    printf("Device open, will generate interrupt...\n"); fflush(stdout);
 
     if (!DeviceIoControl(deviceHandle,
         IOCTL_UDEFX2_GENERATE_INTERRUPT,
