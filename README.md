@@ -7,7 +7,7 @@ The project contains two Windows 10 kernel-mode drivers and one test application
 
 The Kernel mode drivers are:
 * <B>UDEFX2.sys</b> : Sample USB Device Emulation driver (emulates both a virtual USB controller and a virtual USB device attached to that virtual controller) 
-* <B>osrusbfx2.sys</b> : Host-side driver, stolen originally from the WDK sample that talks to the OSR FX2 device, then modified to match the endpoints defined by UDEFX2.sys (above)
+* <B>hostude.sys</b> : Host-side driver, stolen originally from the WDK sample that talks to the OSR FX2 device, then modified to match the endpoints defined by UDEFX2.sys (above)
 
 UDEFX2.sys defines these endpoints:
 * <B>a BULK/IN endpoint</B>:  generates pattern data when read.
@@ -29,11 +29,18 @@ To watch the driver behavior, you can use these scripts:
 It is especially instructional to watch the traces during install/uninstall of the drivers, or when the test application works (see below).
 
 
-Once the drivers are installed, you can test them with the test app, which is also stoken from the WDK sample and modified.  It can be used in 3 ways:
-* *osrusbfx2.exe -w 20*   (writes 20 bytes to BULK/OUT - the trace shows a dump of what is written )
-* *osrusbfx2.exe -v -r 20*   (reads 20 bytes from BULK/IN, dumps result to screen)
-* *osrusbfx2.exe -i abc* (generates an INTERRUPT/IN transfer with a 4-byte little-endian payload matching the hexadecimal parameter provided)
-* *osrusbfx2.exe -p*  (waits for an interrupt, which can be generated in a separate instance of the test app, with the -i command - see INTERRUPT/IN endpoint description above)
+Once the drivers are installed, you can test them with the test app, which is also stoken from the WDK sample and modified.  It can be used a few ways:
+
+*FULL BLOWN TEST*
+* *hostudetest.exe -a   (goes into a loop waiting for commands over USB)
+* *hostudetest.exe -c somemission*   
+** sends "somemission" over BULK/OUT
+**  waits for an interrupt on INTERRUPT/IN
+** finally  then reads USB/IN for response to the mission
+
+*INTERRUPT ONLY TEST*
+* *hostudetest.exe -i abc* (generates an INTERRUPT/IN transfer with a 4-byte little-endian payload matching the hexadecimal parameter provided)
+* *hostudetest.exe -p*  (waits for an interrupt, which can be generated in a separate instance of the test app, with the -i command - see INTERRUPT/IN endpoint description above)
 
 
 
