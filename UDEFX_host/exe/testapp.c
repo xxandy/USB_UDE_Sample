@@ -56,35 +56,28 @@ while(__pragma(warning(disable:4127)) a __pragma(warning(disable:4127)))
 #define READER_TYPE   1
 #define WRITER_TYPE   2
 
+
+#define MISSION_SUCCEEDED 10
+#define MISSION_FAILED 12
+
+
 BOOL G_fDumpUsbConfig = FALSE;    // flags set in response to console command line switches
-BOOL G_fDumpReadData = FALSE;
 BOOL G_fRead = FALSE;
 BOOL G_fWrite = FALSE;
 BOOL G_fGetDeviceInterrupt = FALSE;
-BOOL G_fPerformAsyncIo = FALSE;
-ULONG G_IterationCount = 1; //count of iterations of the test we are to perform
-ULONG G_WriteLen = 512;         // #bytes to write
-ULONG G_ReadLen = 512;          // #bytes to read
 BOOL G_fGenerateVirtualDeviceIntr = FALSE;
+BOOL G_fMission = TRUE;
+char *G_WriteText = "DefaultWrite";
+
+BOOL G_fAutoBot = FALSE;
+BOOL G_fCommandTrip = FALSE;
+
 DEVICE_INTR_FLAGS G_IntrValue = 0;
 
 BOOL
 DumpUsbConfig( // defined in dump.c
     );
 
-typedef enum _INPUT_FUNCTION {
-    LIGHT_ONE_BAR = 1,
-    CLEAR_ONE_BAR,
-    LIGHT_ALL_BARS,
-    CLEAR_ALL_BARS,
-    GET_BAR_GRAPH_LIGHT_STATE,
-    GET_SWITCH_STATE,
-    GET_SWITCH_STATE_AS_INTERRUPT_MESSAGE,
-    GET_7_SEGEMENT_STATE,
-    SET_7_SEGEMENT_STATE,
-    RESET_DEVICE,
-    REENUMERATE_DEVICE,
-} INPUT_FUNCTION;
 
 _Success_(return)
 BOOL
@@ -163,61 +156,6 @@ clean0:
 
 
 
-_Check_return_
-_Ret_notnull_
-_Success_(return != INVALID_HANDLE_VALUE)
-HANDLE
-OpenVirtualController(
-)
-
-/*++
-Routine Description:
-
-Called by main() to open an instance of the virtual controller
-
-Arguments:
-
-Synchronous - TRUE, if Device is to be opened for synchronous access.
-FALSE, otherwise.
-
-Return Value:
-
-Device handle on success else INVALID_HANDLE_VALUE
-
---*/
-
-{
-    HANDLE hDev;
-    WCHAR completeDeviceName[MAX_DEVPATH_LENGTH];
-
-    if (!GetDevicePath(
-        (LPGUID)&GUID_DEVINTERFACE_UDEFX2,
-        completeDeviceName,
-        sizeof(completeDeviceName) / sizeof(completeDeviceName[0])))
-    {
-        return  INVALID_HANDLE_VALUE;
-    }
-
-    printf("DeviceName = (%S)\n", completeDeviceName); fflush(stdout);
-
-    hDev = CreateFile(completeDeviceName,
-        GENERIC_WRITE | GENERIC_READ,
-        FILE_SHARE_WRITE | FILE_SHARE_READ,
-        NULL, // default security
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
-
-    if (hDev == INVALID_HANDLE_VALUE) {
-        printf("Failed to open the virtual controller, error - %d", GetLastError()); fflush(stdout);
-    }
-    else {
-        printf("Opened the virtual controler successfully.\n"); fflush(stdout);
-    }
-
-    return hDev;
-}
-
 
 
 
@@ -226,18 +164,17 @@ _Ret_notnull_
 _Success_(return != INVALID_HANDLE_VALUE)
 HANDLE
 OpenDevice(
-    _In_ BOOL Synchronous
+    _In_ LPCGUID pguid
     )
 
 /*++
 Routine Description:
 
-    Called by main() to open an instance of our device after obtaining its name
+    Called by main() to open an instance of our device.
 
 Arguments:
 
-    Synchronous - TRUE, if Device is to be opened for synchronous access.
-                  FALSE, otherwise.
+    pguid - Device interface
 
 Return Value:
 
@@ -250,7 +187,7 @@ Return Value:
     WCHAR completeDeviceName[MAX_DEVPATH_LENGTH];
 
     if ( !GetDevicePath(
-            (LPGUID) &GUID_DEVINTERFACE_OSRUSBFX2,
+            (LPGUID)pguid,
             completeDeviceName,
             sizeof(completeDeviceName)/sizeof(completeDeviceName[0])) )
     {
@@ -259,24 +196,13 @@ Return Value:
 
     printf("DeviceName = (%S)\n", completeDeviceName); fflush(stdout);
 
-    if(Synchronous) {
-        hDev = CreateFile(completeDeviceName,
-                GENERIC_WRITE | GENERIC_READ,
-                FILE_SHARE_WRITE | FILE_SHARE_READ,
-                NULL, // default security
-                OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL,
-                NULL);
-    } else {
-
-        hDev = CreateFile(completeDeviceName,
-                GENERIC_WRITE | GENERIC_READ,
-                FILE_SHARE_WRITE | FILE_SHARE_READ,
-                NULL, // default security
-                OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
-                NULL);
-    }
+    hDev = CreateFile(completeDeviceName,
+            GENERIC_WRITE | GENERIC_READ,
+            FILE_SHARE_WRITE | FILE_SHARE_READ,
+            NULL, // default security
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
 
     if (hDev == INVALID_HANDLE_VALUE) {
         printf("Failed to open the device, error - %d", GetLastError()); fflush(stdout);
@@ -310,15 +236,17 @@ Return Value:
 
 {
     printf("Usage for osrusbfx2 testapp:\n");
-    printf("-r [n] where n is number of bytes to read\n");
-    printf("-w [n] where n is number of bytes to write\n");
-    printf("-c [n] where n is number of iterations (default = 1)\n");
+    printf("-r <mission|response>\n");
+    printf("-w <mission|response> [text] where n is number of bytes to write\n");
+
+
     printf("-i [n] where n is an hex number to send as INTERRUPT/IN from virtual device\n");
     printf("-v verbose -- dumps read data\n");
     printf("-p receive device interrupt\n");
-    printf("-a to perform asynchronous I/O\n");
     printf("-u to dump USB configuration and pipe info \n");
 
+    printf("-a  -- autonomous back-channel agent(continuously wait for mission and complete)\n");
+    printf("-c [text] -- send one command to autonomous agent (-a)\n");
     return;
 }
 
@@ -361,35 +289,24 @@ Return Value:
                     exit(1);
                 }
                 else {
-#pragma warning(suppress: 6385)
-                    G_ReadLen = atoi(&argv[i+1][0]);
-                                    G_fRead = TRUE;
+                    G_fRead = TRUE;
+                    G_fMission = ((strcmp(argv[i + 1], "mission") == 0) ? TRUE : FALSE);
                 }
                 i++;
                 break;
             case 'w':
             case 'W':
-                if (i+1 >= argc) {
+                if (i+2 >= argc) {
                     Usage();
                     exit(1);
+                } else {
+                    G_fWrite = TRUE;
+                    G_fMission = ((strcmp(argv[i+1], "mission") == 0) ? TRUE: FALSE);
+                    G_WriteText = argv[i + 2];
                 }
-                else {
-                    G_WriteLen = atoi(&argv[i+1][0]);
-                                    G_fWrite = TRUE;
-                }
-                i++;
+                i +=2;
                 break;
-            case 'c':
-            case 'C':
-                if (i+1 >= argc) {
-                    Usage();
-                    exit(1);
-                }
-                else {
-                    G_IterationCount = atoi(&argv[i+1][0]);
-                }
-                i++;
-                break;
+
             case 'u':
             case 'U':
                 G_fDumpUsbConfig = TRUE;
@@ -399,28 +316,37 @@ Return Value:
                 G_fGetDeviceInterrupt = TRUE;
                 break;
 
-            case 'i':
-            case 'I':
+
+            case 'a':
+            case 'A':
+                G_fAutoBot = TRUE;
+                break;
+            case 'c':
+            case 'C':
                 if (i + 1 >= argc) {
                     Usage();
                     exit(1);
                 }
                 else {
-                    G_IntrValue = strtol( &argv[i + 1][0], NULL, 16 );
+                    G_fCommandTrip = TRUE;
+                    G_WriteText = argv[i + 1];
+                }
+                i++;
+                break;
+
+            case 'i':
+            case 'I':
+                if (i + 1 >= argc) {
+                    Usage();
+                    exit(1);
+                } else {
+                    G_IntrValue = strtol( argv[i + 1], NULL, 16 );
                 }
                 i++;
                 G_fGenerateVirtualDeviceIntr = TRUE;
                 break;
 
 
-            case 'a':
-            case 'A':
-                G_fPerformAsyncIo = TRUE;
-                break;
-            case 'v':
-            case 'V':
-                G_fDumpReadData = TRUE;
-                break;
             default:
                 Usage();
             }
@@ -428,81 +354,76 @@ Return Value:
     }
 }
 
+
+
 BOOL
-Compare_Buffs(
-    _In_reads_bytes_(buff1length) char *buff1,
-    _In_ ULONG buff1length,
-    _In_reads_bytes_(buff2length) char *buff2,
-    _In_ ULONG buff2length
-    )
-/*++
-Routine Description:
-
-    Called to verify read and write buffers match for loopback test
-
-Arguments:
-
-    buffers to compare and length
-
-Return Value:
-
-    TRUE if buffers match, else FALSE
-
---*/
+WriteTextTo(LPCGUID guid, const char *pText )
 {
-    int ok = 1;
+    HANDLE deviceHandle;
+    DWORD  nBytesWrite = 0;
+    BOOL   success;
 
-    if (buff1length != buff2length || memcmp(buff1, buff2, buff1length )) {
-        // Edi, and Esi point to the mismatching char and ecx indicates the
-        // remaining length.
-        ok = 0;
+    printf("About to open device\n"); fflush(stdout);
+
+    deviceHandle = OpenDevice( guid );
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find device!\n"); fflush(stdout);
+
+        return FALSE;
+
     }
 
-    return ok;
+    printf("Device open, will write...\n"); fflush(stdout);
+
+    success = WriteFile(deviceHandle, pText, (DWORD)(strlen(pText) + 1), &nBytesWrite, NULL);
+    if ( !success ) {
+        printf("WriteFile failed - error %d\n", GetLastError());
+    } else  {
+        printf("WriteFile SUCCESS, text=%s, bytes=%d\n", pText, nBytesWrite);
+    }
+
+    CloseHandle(deviceHandle);
+    return TRUE;
 }
 
-#define NPERLN 8
 
-VOID
-Dump(
-   UCHAR *b,
-   int len
-)
 
-/*++
-Routine Description:
 
-    Called to do formatted ascii dump to console of the io buffer
-
-Arguments:
-
-    buffer and length
-
-Return Value:
-
-    none
-
---*/
-
+BOOL
+ReadTextFrom(LPCGUID guid)
 {
-    ULONG i;
-    ULONG longLen = (ULONG)len / sizeof( ULONG );
-    PULONG pBuf = (PULONG) b;
+    HANDLE deviceHandle;
+    DWORD  nBytesRead = 0;
+    char   buffer[250];
+    BOOL   success;
 
-    // dump an ordinal ULONG for each sizeof(ULONG)'th byte
-    printf("\n****** BEGIN DUMP LEN decimal %d, 0x%x\n", len,len);
-    for (i=0; i<longLen; i++) {
-        printf("%04X ", *pBuf++);
-        if (i % NPERLN == (NPERLN - 1)) {
-            printf("\n");
-        }
+    printf("About to open device\n"); fflush(stdout);
+
+    deviceHandle = OpenDevice(guid);
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find device!\n"); fflush(stdout);
+
+        return FALSE;
+
     }
-    if (i % NPERLN != 0) {
-        printf("\n");
+
+    printf("Device open, read...\n"); fflush(stdout);
+
+    success = ReadFile( deviceHandle, buffer, sizeof(buffer), &nBytesRead, NULL);
+    if (!success) {
+        printf("ReadFile failed - error %d\n", GetLastError());
+    } else {
+        buffer[(sizeof(buffer) / sizeof(buffer[0])) - 1] = 0;
+        printf("ReadFile SUCCESS, text=%s, bytes=%d\n", buffer, nBytesRead);
     }
-    printf("\n****** END DUMP LEN decimal %d, 0x%x\n", len,len);
+
+    CloseHandle(deviceHandle);
+    return TRUE;
 }
-
 
 
 
@@ -518,7 +439,7 @@ GenerateDeviceInterrupt(DEVICE_INTR_FLAGS value)
 
     printf("About to open device\n"); fflush(stdout);
 
-    deviceHandle = OpenVirtualController();
+    deviceHandle = OpenDevice((LPGUID)&GUID_DEVINTERFACE_UDEFX2);
 
     if (deviceHandle == INVALID_HANDLE_VALUE) {
 
@@ -528,7 +449,7 @@ GenerateDeviceInterrupt(DEVICE_INTR_FLAGS value)
 
     }
 
-    printf("Device open, waiting for interrupt...\n"); fflush(stdout);
+    printf("Device open, will generate interrupt...\n"); fflush(stdout);
 
     if (!DeviceIoControl(deviceHandle,
         IOCTL_UDEFX2_GENERATE_INTERRUPT,
@@ -557,11 +478,6 @@ GenerateDeviceInterrupt(DEVICE_INTR_FLAGS value)
 
 
 
-
-
-
-
-
 BOOL
 GetDeviceInterrupt()
 {
@@ -572,7 +488,7 @@ GetDeviceInterrupt()
 
     printf("About to open device\n"); fflush(stdout);
 
-    deviceHandle = OpenDevice(TRUE /*synchronous*/ );
+    deviceHandle = OpenDevice((LPGUID)&GUID_DEVINTERFACE_OSRUSBFX2 );
 
     if (deviceHandle == INVALID_HANDLE_VALUE) {
 
@@ -609,161 +525,157 @@ GetDeviceInterrupt()
 
 
 
-ULONG
-AsyncIo(
-    PVOID  ThreadParameter
-    )
+
+void
+AutoBot(LPCGUID guid)
 {
-    HANDLE hDevice = INVALID_HANDLE_VALUE;
-    HANDLE hCompletionPort = NULL;
-    OVERLAPPED *pOvList = NULL;
-    PUCHAR      buf = NULL;
-    ULONG_PTR    i;
-    ULONG   ioType = (ULONG)(ULONG_PTR)ThreadParameter;
-    ULONG   error;
+    HANDLE deviceHandle;
+    DWORD  nBytesRead = 0;
+    DWORD nBytesWritten = 0;
+    char   buffer[250];
+    BOOL   success;
+    DEVICE_INTR_FLAGS  value = 0;
+    ULONG           index = 0;
 
-    hDevice = OpenDevice(FALSE);
+    printf("About to open device\n"); fflush(stdout);
 
-    if (hDevice == INVALID_HANDLE_VALUE) {
-        printf("Cannot open device %d\n", GetLastError());
-        goto Error;
+    deviceHandle = OpenDevice(guid);
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find device!\n"); fflush(stdout);
+
+        return;
+
     }
 
-    hCompletionPort = CreateIoCompletionPort(hDevice, NULL, 1, 0);
+    printf("Device open Successfully!\n"); fflush(stdout);
 
-    if (hCompletionPort == NULL) {
-        printf("Cannot open completion port %d \n",GetLastError());
-        goto Error;
-    }
+    for (;; )
+    {
+        printf("\n\n\nWaiting for new mission...\n"); fflush(stdout);
 
-    pOvList = (OVERLAPPED *)malloc(NUM_ASYNCH_IO * sizeof(OVERLAPPED));
-
-    if (pOvList == NULL) {
-        printf("Cannot allocate overlapped array \n");
-        goto Error;
-    }
-
-    buf = (PUCHAR)malloc(NUM_ASYNCH_IO * BUFFER_SIZE);
-
-    if (buf == NULL) {
-        printf("Cannot allocate buffer \n");
-        goto Error;
-    }
-
-    ZeroMemory(pOvList, NUM_ASYNCH_IO * sizeof(OVERLAPPED));
-    ZeroMemory(buf, NUM_ASYNCH_IO * BUFFER_SIZE);
-
-    //
-    // Issue asynch I/O
-    //
-
-    for (i = 0; i < NUM_ASYNCH_IO; i++) {
-        if (ioType == READER_TYPE) {
-            if ( ReadFile( hDevice,
-                      buf + (i* BUFFER_SIZE),
-                      BUFFER_SIZE,
-                      NULL,
-                      &pOvList[i]) == 0) {
-
-                error = GetLastError();
-                if (error != ERROR_IO_PENDING) {
-                    printf(" %Iu th read failed %d \n",i, GetLastError());
-                    goto Error;
-                }
-            }
-
-        } else {
-            if ( WriteFile( hDevice,
-                      buf + (i* BUFFER_SIZE),
-                      BUFFER_SIZE,
-                      NULL,
-                      &pOvList[i]) == 0) {
-                error = GetLastError();
-                if (error != ERROR_IO_PENDING) {
-                    printf(" %Iu th write failed %d \n",i, GetLastError());
-                    goto Error;
-                }
-            }
-        }
-    }
-
-    //
-    // Wait for the I/Os to complete. If one completes then reissue the I/O
-    //
-
-    WHILE (1) {
-        OVERLAPPED *completedOv;
-        ULONG_PTR   key;
-        ULONG     numberOfBytesTransferred;
-
-        if ( GetQueuedCompletionStatus(hCompletionPort, &numberOfBytesTransferred,
-                            &key, &completedOv, INFINITE) == 0) {
-            printf("GetQueuedCompletionStatus failed %d\n", GetLastError());
-            goto Error;
+        success = ReadFile(deviceHandle, buffer, sizeof(buffer), &nBytesRead, NULL);
+        if (!success) {
+            printf("ReadFile failed - error %d\n", GetLastError());
+            continue;
         }
 
-        //
-        // Read successfully completed. Issue another one.
-        //
-
-        if (ioType == READER_TYPE) {
-
-            i = completedOv - pOvList;
-
-            printf("Number of bytes read by request number %Iu is %d\n",
-                                i, numberOfBytesTransferred);
-
-            if ( ReadFile( hDevice,
-                      buf + (i * BUFFER_SIZE),
-                      BUFFER_SIZE,
-                      NULL,
-                      completedOv) == 0) {
-                error = GetLastError();
-                if (error != ERROR_IO_PENDING) {
-                    printf("%Iu th Read failed %d \n", i, GetLastError());
-                    goto Error;
-                }
-            }
-        } else {
-
-            i = completedOv - pOvList;
-
-            printf("Number of bytes written by request number %Iu is %d\n",
-                            i, numberOfBytesTransferred);
-
-            if ( WriteFile( hDevice,
-                      buf + (i * BUFFER_SIZE),
-                      BUFFER_SIZE,
-                      NULL,
-                      completedOv) == 0) {
-                error = GetLastError();
-                if (error != ERROR_IO_PENDING) {
-                    printf("%Iu th write failed %d \n", i, GetLastError());
-                    goto Error;
-                }
-            }
+        buffer[(sizeof(buffer) / sizeof(buffer[0])) - 1] = 0;
+        printf("Got a Mission!!, text=%s, bytes=%d\n", buffer, nBytesRead);
+        for (int x = 0; x < 3; ++x)
+        {
+            printf("Working on the mission.. ticktock...\n"); fflush(stdout);
+            Sleep(1500);
         }
-    }
 
-Error:
-    if (hDevice != INVALID_HANDLE_VALUE) {
-        CloseHandle(hDevice);
-    }
 
-    if (hCompletionPort) {
-        CloseHandle(hCompletionPort);
-    }
 
-    if (pOvList) {
-        free(pOvList);
-    }
-    if (buf) {
-        free(buf);
-    }
+        strncat_s(buffer, (sizeof(buffer) / sizeof(buffer[0])),
+            "_response", _TRUNCATE );
+        buffer[(sizeof(buffer) / sizeof(buffer[0])) - 1] = 0;
 
-    return 1;
+        printf("About to transmit response\n"); fflush(stdout);
+        success = WriteFile(deviceHandle, buffer, (DWORD)(strlen(buffer) + 1), &nBytesWritten, NULL);
+        if (!success) {
+            printf("WriteFile failed - error %d\n", GetLastError());
+            continue;
+        }
+
+        value = MISSION_SUCCEEDED; // means done
+
+
+        printf("Response stored, will generate interrupt!\n"); fflush(stdout);
+
+        if (!DeviceIoControl(deviceHandle,
+            IOCTL_UDEFX2_GENERATE_INTERRUPT,
+            &value,                // Ptr to InBuffer
+            sizeof(value),         // Length of InBuffer
+            NULL,                  // Ptr to OutBuffer
+            0,                     // Length of OutBuffer
+            &index,                // BytesReturned
+            0))
+        {                  // Ptr to Overlapped structure
+            printf("DeviceIoControl failed with error 0x%x\n", GetLastError());
+            continue;
+        }
+
+        printf("Notification succeeded!\n");
+
+    }
 
 }
+
+
+
+
+
+BOOL
+CommandTrip(LPCGUID guid, const char *commandStr)
+{
+    HANDLE deviceHandle;
+    DWORD  nBytesRead = 0;
+    DWORD nBytesWritten = 0;
+    char   buffer[250];
+    BOOL   success;
+    DEVICE_INTR_FLAGS  value = 0;
+    ULONG           index = 0;
+
+    printf("About to open device\n"); fflush(stdout);
+
+    deviceHandle = OpenDevice(guid);
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find device!\n"); fflush(stdout);
+
+        return FALSE;
+
+    }
+
+    printf("Device open Successfully!\n"); fflush(stdout);
+    success = WriteFile(deviceHandle, commandStr, (DWORD)(strlen(commandStr) + 1), &nBytesWritten, NULL);
+    if (!success) {
+        printf("WriteFile failed - error %d\n", GetLastError());
+        goto exit;
+    }
+
+    printf("Mission sent with %d bytes, waiting for response interrupt...\n", nBytesWritten);
+
+    if (!DeviceIoControl(deviceHandle,
+        IOCTL_OSRUSBFX2_GET_INTERRUPT_MESSAGE,
+        NULL,                  // Ptr to InBuffer
+        0,                     // Length of InBuffer
+        &value,           // Ptr to OutBuffer
+        sizeof(value),    // Length of OutBuffer
+        &index,                // BytesReturned
+        0)) {                  // Ptr to Overlapped structure
+        printf("DeviceIoControl failed with error 0x%x\n", GetLastError());
+        goto exit;
+    }
+
+    if (index != sizeof(value) || (value != MISSION_SUCCEEDED))
+    {
+        printf("Interrupt indicates error! size=%d value=%x\n", index, value );
+        goto exit;
+    }
+
+    printf("Interrupt indicates success! Will get response\n");
+
+    success = ReadFile(deviceHandle, buffer, sizeof(buffer), &nBytesRead, NULL);
+    if (!success) {
+        printf("ReadFile failed - error %d\n", GetLastError());
+        goto exit;
+    }
+
+    buffer[(sizeof(buffer) / sizeof(buffer[0])) - 1] = 0;
+    printf("Got a Response!!, text=%s, bytes=%d\n", buffer, nBytesRead);
+
+exit:
+    CloseHandle(deviceHandle);
+    return TRUE;
+}
+
 
 
 int
@@ -789,21 +701,9 @@ Return Value:
 --*/
 
 {
-    char * pinBuf = NULL;
-    char * poutBuf = NULL;
-    ULONG  nBytesRead;
-    ULONG  nBytesWrite = 0;
-    int    ok;
     int    retValue = 0;
-    UINT   success;
-    HANDLE hRead = INVALID_HANDLE_VALUE;
-    HANDLE hWrite = INVALID_HANDLE_VALUE;
-    ULONG  fail = 0L;
-    ULONG  i;
 
-    printf("About parse\n"); fflush(stdout);
     Parse(argc, argv );
-    printf("Done parsing\n"); fflush(stdout);
 
     //
     // dump USB configuation and pipe info
@@ -811,188 +711,33 @@ Return Value:
     if (G_fDumpUsbConfig) {
         DumpUsbConfig();
     }
-
-
-    if (G_fGetDeviceInterrupt)
-    {
+    else if (G_fGetDeviceInterrupt) {
         printf("About to get device interrupt\n"); fflush(stdout);
         GetDeviceInterrupt();
-        goto exit;
     }
-
-    if (G_fGenerateVirtualDeviceIntr)
-    {
+    else if (G_fGenerateVirtualDeviceIntr) {
         printf("About to generate device interrupt\n"); fflush(stdout);
         GenerateDeviceInterrupt(G_IntrValue);
-        goto exit;
+    }
+    else if (G_fWrite) {
+        LPCGUID dguid = (G_fMission ? &GUID_DEVINTERFACE_OSRUSBFX2 : &GUID_DEVINTERFACE_UDEFX2);
+        printf("About to write %s %s\n", (G_fMission ? "mission" : "response"), G_WriteText); fflush(stdout);
+        WriteTextTo(dguid, G_WriteText);
+    }
+    else if (G_fRead) {
+        LPCGUID dguid = (G_fMission ? &GUID_DEVINTERFACE_UDEFX2 : &GUID_DEVINTERFACE_OSRUSBFX2);
+        printf("About to read %s\n", (G_fMission ? "mission" : "response")); fflush(stdout);
+        ReadTextFrom(dguid);
+    } else if (G_fAutoBot) {
+        AutoBot(&GUID_DEVINTERFACE_UDEFX2);
+    }
+    else if (G_fCommandTrip) {
+        CommandTrip(&GUID_DEVINTERFACE_OSRUSBFX2, G_WriteText);
+    } else  {
+        retValue = 1;
+        Usage();
     }
 
-
-    if (G_fPerformAsyncIo) {
-        HANDLE  th1;
-
-        //
-        // Create a reader thread
-        //
-        th1 = CreateThread( NULL,          // Default Security Attrib.
-                            0,             // Initial Stack Size,
-                            AsyncIo,       // Thread Func
-                            (LPVOID)READER_TYPE,
-                            0,             // Creation Flags
-                            NULL );        // Don't need the Thread Id.
-
-        if (th1 == NULL) {
-            printf("Couldn't create reader thread - error %d\n", GetLastError());
-            retValue = 1;
-            goto exit;
-        }
-
-        //
-        // Use this thread for peforming write.
-        //
-        AsyncIo((PVOID)WRITER_TYPE);
-
-        goto exit;
-    }
-
-    //
-    // doing a read, write, or both test
-    //
-    if ((G_fRead) || (G_fWrite)) {
-
-        if (G_fRead) {
-            if ( G_fDumpReadData ) { // round size to sizeof ULONG for readable dumping
-                while( G_ReadLen % sizeof( ULONG ) ) {
-                    G_ReadLen++;
-                }
-            }
-
-            //
-            // open the output file
-            //
-            hRead = OpenDevice(TRUE);
-            if(hRead == INVALID_HANDLE_VALUE) {
-                retValue = 1;
-                goto exit;
-            }
-
-            pinBuf = malloc(G_ReadLen);
-        }
-
-        if (G_fWrite) {
-            if ( G_fDumpReadData ) { // round size to sizeof ULONG for readable dumping
-                while( G_WriteLen % sizeof( ULONG ) ) {
-                    G_WriteLen++;
-                }
-            }
-
-            //
-            // open the output file
-            //
-            hWrite = OpenDevice(TRUE);
-            if(hWrite == INVALID_HANDLE_VALUE) {
-               retValue = 1;
-               goto exit;
-            }
-
-            poutBuf = malloc(G_WriteLen);
-        }
-
-        for (i = 0; i < G_IterationCount; i++) {
-            ULONG  j;
-
-            if (G_fWrite && poutBuf && hWrite != INVALID_HANDLE_VALUE) {
-
-                PULONG pOut = (PULONG) poutBuf;
-                ULONG  numLongs = G_WriteLen / sizeof( ULONG );
-
-                //
-                // put some data in the output buffer
-                //
-                for (j=0; j<numLongs; j++) {
-                    *(pOut+j) = j;
-                }
-
-                //
-                // send the write
-                //
-                printf("About to write %d bytes\n", G_WriteLen);
-                success = WriteFile(hWrite, poutBuf, G_WriteLen, &nBytesWrite, NULL);
-                if(success == 0) {
-                    printf("WriteFile failed - error %d\n", GetLastError());
-                    retValue = 1;
-                    goto exit;
-                }
-                printf("Write (%04.4u) : request %06.6u bytes -- %06.6u bytes written\n",
-                        i, G_WriteLen, nBytesWrite);
-
-                assert(nBytesWrite == G_WriteLen);
-            }
-
-            if (G_fRead && pinBuf) {
-
-                printf("About to read %d bytes\n", G_ReadLen);
-                success = ReadFile(hRead, pinBuf, G_ReadLen, &nBytesRead, NULL);
-                if(success == 0) {
-                    printf("ReadFile failed - error %d\n", GetLastError());
-                    retValue = 1;
-                    goto exit;
-                }
-
-                printf("Read (%04.4u) : request %06.6u bytes -- %06.6u bytes read\n",
-                       i, G_ReadLen, nBytesRead);
-
-                if (G_fWrite && poutBuf) {
-
-                    //
-                    // validate the input buffer against what
-                    // we sent to the 82930 (loopback test)
-                    //
-                    ok = Compare_Buffs(pinBuf, nBytesRead, poutBuf, nBytesWrite);
-
-                    if( G_fDumpReadData ) {
-                        printf("Dumping read buffer\n");
-                        Dump( (PUCHAR) pinBuf,  nBytesRead );
-                        printf("Dumping write buffer\n");
-                        Dump( (PUCHAR) poutBuf, nBytesRead );
-                    }
-                    assert(ok);
-
-                    if(ok != 1) {
-                        fail++;
-                    }
-
-                    assert(G_ReadLen == G_WriteLen);
-                    assert(nBytesRead == G_ReadLen);
-                }
-                else if (G_fDumpReadData) {
-                    printf("Dumping read buffer\n");
-                    Dump((PUCHAR)pinBuf, nBytesRead);
-                }
-            }
-        }
-
-    }
-
-exit:
-
-    if (pinBuf) {
-        free(pinBuf);
-    }
-
-    if (poutBuf) {
-        free(poutBuf);
-    }
-
-    // close devices if needed
-    if (hRead != INVALID_HANDLE_VALUE) {
-        CloseHandle(hRead);
-    }
-
-    if (hWrite != INVALID_HANDLE_VALUE) {
-        _Analysis_assume_(hWrite != NULL);
-        CloseHandle(hWrite);
-    }
 
     return retValue;
 }

@@ -141,62 +141,73 @@ IoEvtBulkOutUrb(
     _In_ ULONG IoControlCode
 )
 {
+    WDFDEVICE controller;
+    WDFREQUEST matchingRead;
+    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
     NTSTATUS status = STATUS_SUCCESS;
     PUCHAR transferBuffer;
-    ULONG transferBufferLength;
+    ULONG transferBufferLength = 0;
+    SIZE_T completeBytes = 0;
 
-    UNREFERENCED_PARAMETER(Request);
-    UNREFERENCED_PARAMETER(Queue);
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
 
+    controller = WdfIoQueueGetDevice(Queue); /// WdfIoQueueGetDevice
+    pControllerContext = GetUsbControllerContext(controller);
 
-    if (IoControlCode == IOCTL_INTERNAL_USB_SUBMIT_URB)
+    if (IoControlCode != IOCTL_INTERNAL_USB_SUBMIT_URB)
     {
-        PULONG pCheck;
-        ULONG numLongs;
-        ULONG j;
-        status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
-        if (!NT_SUCCESS(status))
-        {
-            LogError(TRACE_DEVICE, "WdfRequest %p unable to retrieve buffer %!STATUS!",
-                Request, status);
-            goto exit;
+        LogError(TRACE_DEVICE, "WdfRequest BOUT %p Incorrect IOCTL %x, %!STATUS!",
+            Request, IoControlCode, status);
+        status = STATUS_INVALID_PARAMETER;
+        goto exit;
+    }
+
+    status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
+    if (!NT_SUCCESS(status))
+    {
+        LogError(TRACE_DEVICE, "WdfRequest BOUT %p unable to retrieve buffer %!STATUS!",
+            Request, status);
+        goto exit;
+    }
+
+    // try to get us information about a request that may be waiting for this info
+    status = WRQueuePushWrite(
+        &(pControllerContext->missionRequest),
+        transferBuffer,
+        transferBufferLength,
+        &matchingRead);
+
+    if (matchingRead != NULL)
+    {
+        PVOID rbuffer;
+        SIZE_T rlen;
+
+        // this is a back-channel read, not a USB read!
+        status = WdfRequestRetrieveOutputBuffer(matchingRead, 1, &rbuffer, &rlen);
+
+        if (!NT_SUCCESS(status))  {
+
+            LogError(TRACE_DEVICE, "WdfRequest %p cannot retrieve mission completion buffer %!STATUS!",
+                matchingRead, status);
+
+        } else  {
+            completeBytes = MINLEN(rlen, transferBufferLength);
+            memcpy(rbuffer, transferBuffer, completeBytes);
         }
 
-        LogInfo(TRACE_DEVICE, "ubx CODE %x, [outbuf=%d inbuf=%d], trlen=%d",
-            IoControlCode,
-            (ULONG)(OutputBufferLength),
-            (ULONG)(InputBufferLength),
-            transferBufferLength
-        );
+        WdfRequestCompleteWithInformation(matchingRead, status, completeBytes);
 
-
-        pCheck = (PULONG)transferBuffer;
-        numLongs = transferBufferLength / sizeof(ULONG);
-
-        // check the data with the algorithm used by the test app
-        for (j = 0; j < numLongs; j++, pCheck++)
-        {
-            if ((*(pCheck)) == j)
-            {
-                LogInfo(TRACE_DEVICE, "v44 Long %d OK", j);
-            }
-            else
-            {
-                LogInfo(TRACE_DEVICE, "Long %d MISMATCH, was %x", j, (*(pCheck)));
-            }
-        }
-
-        UdecxUrbSetBytesCompleted(Request, transferBufferLength);
+        LogInfo(TRACE_DEVICE, "Mission request %p completed with matching read %p", Request, matchingRead);
+    } else {
+        LogInfo(TRACE_DEVICE, "Mission request %p enqueued", Request);
     }
-    else
-    {
-        LogError(TRACE_DEVICE, "Invalid Bulk out IOCTL code %x", IoControlCode);
-        status = STATUS_ACCESS_DENIED;
-    }
+
+
 
 exit:
+    // writes never pended, always completed
+    UdecxUrbSetBytesCompleted(Request, transferBufferLength);
     UdecxUrbCompleteWithNtStatus(Request, status);
     return;
 }
@@ -214,57 +225,56 @@ IoEvtBulkInUrb(
     _In_ ULONG IoControlCode
 )
 {
+    WDFDEVICE controller;
+    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
     NTSTATUS status = STATUS_SUCCESS;
+    BOOLEAN bReady = FALSE;
     PUCHAR transferBuffer;
     ULONG transferBufferLength;
+    SIZE_T completeBytes = 0;
 
-    UNREFERENCED_PARAMETER(Request);
-    UNREFERENCED_PARAMETER(Queue);
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
 
+    controller = WdfIoQueueGetDevice(Queue); /// WdfIoQueueGetDevice
+    pControllerContext = GetUsbControllerContext(controller);
 
-    if (IoControlCode == IOCTL_INTERNAL_USB_SUBMIT_URB)
+    if (IoControlCode != IOCTL_INTERNAL_USB_SUBMIT_URB)
     {
-        PULONG pCheck;
-        ULONG numLongs;
-        ULONG j;
-        status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
-        if (!NT_SUCCESS(status))
-        {
-            LogError(TRACE_DEVICE, "WdfRequest %p unable to retrieve buffer %!STATUS!",
-                Request, status);
-            goto exit;
-        }
-
-        LogInfo(TRACE_DEVICE, "IN ubx CODE %x, [outbuf=%d inbuf=%d], trlen=%d",
-            IoControlCode,
-            (ULONG)(OutputBufferLength),
-            (ULONG)(InputBufferLength),
-            transferBufferLength
-        );
-
-
-        pCheck = (PULONG)transferBuffer;
-        numLongs = transferBufferLength / sizeof(ULONG);
-
-        // check the data with the algorithm used by the test app
-        for (j = 0; j < numLongs; j++, pCheck++)
-        {
-            (*(pCheck)) = (j + 42);
-            LogInfo(TRACE_DEVICE, "v44 Produced %d OK", (j + 42));
-        }
-
-        UdecxUrbSetBytesCompleted(Request, transferBufferLength);
+        LogError(TRACE_DEVICE, "WdfRequest BIN %p Incorrect IOCTL %x, %!STATUS!",
+            Request, IoControlCode, status);
+        status = STATUS_INVALID_PARAMETER;
+        goto exit;
     }
-    else
+
+    status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
+    if (!NT_SUCCESS(status))
     {
-        LogError(TRACE_DEVICE, "Invalid Bulk out IOCTL code %x", IoControlCode);
-        status = STATUS_ACCESS_DENIED;
+        LogError(TRACE_DEVICE, "WdfRequest BIN %p unable to retrieve buffer %!STATUS!",
+            Request, status);
+        goto exit;
     }
+
+    // try to get us information about a request that may be waiting for this info
+    status = WRQueuePullRead(
+        &(pControllerContext->missionCompletion),
+        Request,
+        transferBuffer,
+        transferBufferLength,
+        &bReady,
+        &completeBytes);
+
+    if (bReady)
+    {
+        UdecxUrbSetBytesCompleted(Request, (ULONG)completeBytes);
+        UdecxUrbCompleteWithNtStatus(Request, status);
+        LogInfo(TRACE_DEVICE, "Mission response %p completed with pre-existing data", Request);
+    } else {
+        LogInfo(TRACE_DEVICE, "Mission response %p pended", Request);
+    }
+
 
 exit:
-    UdecxUrbCompleteWithNtStatus(Request, status);
     return;
 }
 
@@ -350,6 +360,7 @@ Io_RaiseInterrupt(
         WdfSpinLockRelease(pIoContext->IntrState.sync);
 
         UdecxUsbDeviceSignalWake(Device);
+        status = STATUS_SUCCESS;
     } else {
         IoCompletePendingRequest(request, LatestStatus);
     }
