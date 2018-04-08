@@ -46,11 +46,20 @@
     <ClCompile Include="driver.c; device.c; ioctl.c; bulkrwr.c; Interrupt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="driver.c; device.c; ioctl.c; bulkrwr.c; Interrupt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="driver.c; device.c; ioctl.c; bulkrwr.c; Interrupt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="driver.c; device.c; ioctl.c; bulkrwr.c; Interrupt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="driver.c; device.c; ioctl.c; bulkrwr.c; Interrupt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <MessageCompile Include="osrusbfx2.man">
-      <Filter>Resource Files</Filter>
-    </MessageCompile>
     <ResourceCompile Include="osrusbfx2.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
@@ -69,6 +78,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\inc\prototypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="*.h;*.hpp;*.hxx;*.hm;*.inl;*.xsd">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

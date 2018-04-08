@@ -22,7 +22,7 @@ Environment:
 
 --*/
 
-#include <osrusbfx2.h>
+#include <hostude.h>
 
 
 #include "bulkrwr.tmh"
@@ -60,7 +60,6 @@ Return Value:
     NTSTATUS                    status;
     WDFMEMORY                   reqMemory;
     PDEVICE_CONTEXT             pDeviceContext;
-    GUID                        activity = RequestToActivityId(Request);
 
     UNREFERENCED_PARAMETER(Queue);
 
@@ -68,8 +67,6 @@ Return Value:
     // Log read start event, using IRP activity ID if available or request
     // handle otherwise.
     //
-
-    EventWriteReadStart(&activity, WdfIoQueueGetDevice(Queue), (ULONG)Length);
 
     TraceEvents(TRACE_LEVEL_VERBOSE, DBG_READ, "-->OsrFxEvtIoRead\n");
 
@@ -132,7 +129,6 @@ Exit:
         //
         // log event read failed
         //
-        EventWriteReadFail(&activity, WdfIoQueueGetDevice(Queue), status);
         WdfRequestCompleteWithInformation(Request, status, 0);
     }
 
@@ -171,7 +167,6 @@ Return Value:
 {
     NTSTATUS    status;
     size_t      bytesRead = 0;
-    GUID        activity = RequestToActivityId(Request);
     PWDF_USB_REQUEST_COMPLETION_PARAMS usbCompletionParams;
 
     UNREFERENCED_PARAMETER(Target);
@@ -193,16 +188,6 @@ Return Value:
 
     }
 
-    //
-    // Log read stop event, using IRP activity ID if available or request
-    // handle otherwise.
-    //
-
-    EventWriteReadStop(&activity, 
-                       WdfIoQueueGetDevice(WdfRequestGetIoQueue(Request)),
-                       bytesRead, 
-                       status, 
-                       usbCompletionParams->UsbdStatus);
 
     WdfRequestCompleteWithInformation(Request, status, bytesRead);
 
@@ -241,16 +226,10 @@ Return Value:
     WDFUSBPIPE                  pipe;
     WDFMEMORY                   reqMemory;
     PDEVICE_CONTEXT             pDeviceContext;
-    GUID                        activity = RequestToActivityId(Request);
 
     UNREFERENCED_PARAMETER(Queue);
 
 
-    // 
-    // Log write start event, using IRP activity ID if available or request
-    // handle otherwise.
-    //
-    EventWriteWriteStart(&activity, WdfIoQueueGetDevice(Queue), (ULONG)Length);
 
     TraceEvents(TRACE_LEVEL_VERBOSE, DBG_WRITE, "-->OsrFxEvtIoWrite\n");
 
@@ -306,10 +285,6 @@ Return Value:
 Exit:
 
     if (!NT_SUCCESS(status)) {
-        //
-        // log event write failed
-        //
-        EventWriteWriteFail(&activity, WdfIoQueueGetDevice(Queue), status);
 
         WdfRequestCompleteWithInformation(Request, status, 0);
     }
@@ -349,7 +324,6 @@ Return Value:
 {
     NTSTATUS    status;
     size_t      bytesWritten = 0;
-    GUID        activity = RequestToActivityId(Request);
     PWDF_USB_REQUEST_COMPLETION_PARAMS usbCompletionParams;
 
     UNREFERENCED_PARAMETER(Target);
@@ -372,17 +346,6 @@ Return Value:
             "Write failed: request Status 0x%x UsbdStatus 0x%x\n",
                 status, usbCompletionParams->UsbdStatus);
     }
-
-    //
-    // Log write stop event, using IRP activtiy ID if available or request
-    // handle otherwise
-    //
-    EventWriteWriteStop(&activity, 
-                        WdfIoQueueGetDevice(WdfRequestGetIoQueue(Request)),
-                        bytesWritten, 
-                        status, 
-                        usbCompletionParams->UsbdStatus);
-
 
     WdfRequestCompleteWithInformation(Request, status, bytesWritten);
 

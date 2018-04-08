@@ -22,7 +22,7 @@ Environment:
 
 --*/
 
-#include <osrusbfx2.h>
+#include <hostude.h>
 
 #include "interrupt.tmh"
 
