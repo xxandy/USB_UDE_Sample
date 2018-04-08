@@ -32,7 +32,7 @@ It is especially instructional to watch the traces during install/uninstall of t
 Once the drivers are installed, you can test them with the test app, which is also stoken from the WDK sample and modified.  It can be used a few ways:
 
 *FULL BLOWN TEST*
-* *hostudetest.exe -a*   (goes into a loop waiting for commands over USB)
+* *hostudetest.exe -a*   (goes into a loop waiting for commands over USB. Those can be sent from a separate instance, with the -c flag)
 * *hostudetest.exe -c somemission*   
 1) sends "somemission" over BULK/OUT
 2)  waits for an interrupt on INTERRUPT/IN
