@@ -17,6 +17,7 @@ Environment:
 #pragma once
 
 #include "public.h"
+#include "Misc.h"
 
 EXTERN_C_START
 
@@ -41,6 +42,8 @@ typedef struct _UDECX_USBCONTROLLER_CONTEXT {
     KEVENT ResetCompleteEvent;
     BOOLEAN AllowOnlyResetInterrupts;
     WDFQUEUE DefaultQueue;
+    WRITE_BUFFER_TO_READ_REQUEST_QUEUE missionRequest;
+    WRITE_BUFFER_TO_READ_REQUEST_QUEUE missionCompletion;
 
     PUDECXUSBDEVICE_INIT  ChildDeviceInit;
     UDECXUSBDEVICE        ChildDevice;
@@ -61,13 +64,6 @@ WDF_DECLARE_CONTEXT_TYPE(REQUEST_CONTEXT);
 
 
 
-
-typedef struct _BUFFER_CONTENT
-{
-	LIST_ENTRY  BufferLink;
-	PVOID       Buffer;
-	ULONG       BufferLength;
-} BUFFER_CONTENT, *PBUFFER_CONTENT;
 
 
 
@@ -90,6 +86,8 @@ EVT_WDF_DEVICE_D0_ENTRY_POST_INTERRUPTS_ENABLED ControllerWdfEvtDeviceD0EntryPos
 EVT_WDF_DEVICE_D0_EXIT_PRE_INTERRUPTS_DISABLED  ControllerWdfEvtDeviceD0ExitPreInterruptsDisabled;
 EVT_WDF_OBJECT_CONTEXT_CLEANUP                  ControllerWdfEvtCleanupCallback;
 EVT_WDF_IO_QUEUE_IO_DEVICE_CONTROL              ControllerEvtIoDeviceControl;
+EVT_WDF_IO_QUEUE_IO_READ                        ControllerEvtRead;
+EVT_WDF_IO_QUEUE_IO_WRITE                       ControllerEvtWrite;
 
 EVT_UDECX_WDF_DEVICE_QUERY_USB_CAPABILITY         ControllerEvtUdecxWdfDeviceQueryUsbCapability;
 
