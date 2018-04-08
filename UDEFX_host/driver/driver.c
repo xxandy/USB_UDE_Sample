@@ -15,29 +15,23 @@ Abstract:
 
     Main module.
 
-    This driver is for Open System Resources USB-FX2 Learning Kit designed
-    and built by OSR specifically for use in teaching software developers how to write
-    drivers for USB devices.
-
-    The board supports a single configuration. The board automatically
-    detects the speed of the host controller, and supplies either the
-    high or full speed configuration based on the host controller's speed.
-
-    The firmware supports 3 endpoints:
-
-    Endpoint number 1 is used to indicate the state of the 8-switch
-    switch-pack on the OSR USB-FX2 board. A single byte representing
-    the switch state is sent (a) when the board is first started,
-    (b) when the board resumes after selective-suspend,
-    (c) whenever the state of the switches is changed.
-
-    Endpoints 6 and 8 perform an internal loop-back function.
-    Data that is sent to the board at EP6 is returned to the host on EP8.
-
-    For further information on the endpoints, please refer to the spec
-    http://www.osronline.com/hardware/OSRFX2_32.pdf.
-
-    Vendor ID of the device is 0x4705 and Product ID is 0x210.
+    This driver is for the UDEFX2 Virtual Device.
+	
+	It is based on the OSR USB Sample for the FX-2 board, 
+	and the device interface is similar - but not identical
+	 - to the FX2-2.
+	 
+	The UDEFX2 interface has three endpoints:
+	- a bulk out endpoint, for outgoing "missions"
+	- a bulk in endpoint, for incoming "response to missions"
+	- an interrupt in endpoint, which always brings in an arbitrary
+	  4-byte data blob (in the UDE sample, currently 
+	  a little endian DWORD with value 0x11 or 0x10 ).
+	
+	- the way the device is meant to be used is      
+	  - send a "mission" via bulk out 
+	  - wait for an interrupt to arrive on interrupt/in with value 0x10
+	  - get the "mission response" via bulk in
 
 Environment:
 
@@ -45,7 +39,7 @@ Environment:
 
 --*/
 
-#include <osrusbfx2.h>
+#include <hostude.h>
 
 #include "driver.tmh"
 
@@ -116,10 +110,6 @@ Return Value:
     g_pIoSetDeviceInterfacePropertyData = (PFN_IO_SET_DEVICE_INTERFACE_PROPERTY_DATA) (ULONG_PTR)
         MmGetSystemRoutineAddress(&funcName);
 
-    //
-    // Register with ETW (unified tracing)
-    //
-    EventRegisterOSRUSBFX2();
 
     //
     // Initiialize driver config to control the attributes that
@@ -167,7 +157,6 @@ Return Value:
         // will be executed when the framework deletes the DriverObject.
         //
         WPP_CLEANUP(DriverObject);
-        EventUnregisterOSRUSBFX2();
     }
 
     return status;
@@ -206,8 +195,6 @@ Return Value:
     WPP_CLEANUP( WdfDriverWdmGetDriverObject( (WDFDRIVER)Driver ));
 
     UNREFERENCED_PARAMETER(Driver); // For the case when WPP is not being used.
-
-    EventUnregisterOSRUSBFX2();
 }
 
 

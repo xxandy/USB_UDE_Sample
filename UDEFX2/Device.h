@@ -86,8 +86,7 @@ EVT_WDF_DEVICE_D0_ENTRY_POST_INTERRUPTS_ENABLED ControllerWdfEvtDeviceD0EntryPos
 EVT_WDF_DEVICE_D0_EXIT_PRE_INTERRUPTS_DISABLED  ControllerWdfEvtDeviceD0ExitPreInterruptsDisabled;
 EVT_WDF_OBJECT_CONTEXT_CLEANUP                  ControllerWdfEvtCleanupCallback;
 EVT_WDF_IO_QUEUE_IO_DEVICE_CONTROL              ControllerEvtIoDeviceControl;
-EVT_WDF_IO_QUEUE_IO_READ                        ControllerEvtRead;
-EVT_WDF_IO_QUEUE_IO_WRITE                       ControllerEvtWrite;
+
 
 EVT_UDECX_WDF_DEVICE_QUERY_USB_CAPABILITY         ControllerEvtUdecxWdfDeviceQueryUsbCapability;
 

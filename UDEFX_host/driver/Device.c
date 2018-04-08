@@ -22,7 +22,7 @@ Environment:
 
 --*/
 
-#include <osrusbfx2.h>
+#include <hostude.h>
 #include <devpkey.h>
 
 #include "device.tmh"
@@ -304,7 +304,7 @@ Return Value:
     // Register a device interface so that app can find our device and talk to it.
     //
     status = WdfDeviceCreateDeviceInterface(device,
-                                            (LPGUID) &GUID_DEVINTERFACE_OSRUSBFX2,
+                                            (LPGUID) &GUID_DEVINTERFACE_HOSTUDE,
                                             NULL); // Reference String
 
     if (!NT_SUCCESS(status)) {
@@ -346,7 +346,7 @@ Return Value:
         }
 
         status = WdfDeviceRetrieveDeviceInterfaceString(device,
-                                                        (LPGUID) &GUID_DEVINTERFACE_OSRUSBFX2,
+                                                        (LPGUID) &GUID_DEVINTERFACE_HOSTUDE,
                                                         NULL,
                                                         symbolicLinkString);
 
@@ -415,13 +415,6 @@ Error:
         WdfObjectDelete(symbolicLinkString);
     }
 
-    //
-    // Log fail to add device to the event log
-    //
-    EventWriteFailAddDevice(&activity,
-                            pDevContext->DeviceName,
-                            pDevContext->Location,
-                            status);
 
     return status;
 }
@@ -881,20 +874,13 @@ Return Value:
         // support it. If the port doesn't support high speed it is a 1.1 port
         //
         if ((pDeviceContext->UsbDeviceTraits & WDF_USB_DEVICE_TRAIT_AT_HIGH_SPEED) == 0) {
-            GUID activity = DeviceToActivityId(Device);
-
             TraceEvents(TRACE_LEVEL_ERROR, DBG_PNP,
                             " On a 1.1 USB port on Windows Vista"
                             " this is expected as the OSR USB Fx2 board's Interrupt EndPoint descriptor"
                             " doesn't conform to the USB specification. Windows Vista detects this and"
                             " returns an error. \n"
                             );
-            EventWriteSelectConfigFailure(
-                &activity,
-                pDeviceContext->DeviceName,
-                pDeviceContext->Location,
-                status
-                );
+
         }
 
         return status;

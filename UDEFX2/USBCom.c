@@ -15,6 +15,7 @@ Abstract:
 #include "Device.h"
 #include "usbdevice.h"
 #include "USBCom.h"
+#include "BackChannel.h"
 #include "ucx/1.4/ucxobjects.h"
 #include "USBCom.tmh"
 
@@ -22,6 +23,7 @@ Abstract:
 
 typedef struct _ENDPOINTQUEUE_CONTEXT {
     UDECXUSBDEVICE usbDeviceObj;
+    WDFDEVICE      backChannelDevice;
 } ENDPOINTQUEUE_CONTEXT, *PENDPOINTQUEUE_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(ENDPOINTQUEUE_CONTEXT, GetEndpointQueueContext);
@@ -141,9 +143,10 @@ IoEvtBulkOutUrb(
     _In_ ULONG IoControlCode
 )
 {
-    WDFDEVICE controller;
     WDFREQUEST matchingRead;
-    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
+    WDFDEVICE backchannel;
+    PUDECX_BACKCHANNEL_CONTEXT pBackChannelContext;
+    PENDPOINTQUEUE_CONTEXT pEpQContext;
     NTSTATUS status = STATUS_SUCCESS;
     PUCHAR transferBuffer;
     ULONG transferBufferLength = 0;
@@ -152,8 +155,9 @@ IoEvtBulkOutUrb(
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
 
-    controller = WdfIoQueueGetDevice(Queue); /// WdfIoQueueGetDevice
-    pControllerContext = GetUsbControllerContext(controller);
+    pEpQContext = GetEndpointQueueContext(Queue);
+    backchannel = pEpQContext->backChannelDevice;
+    pBackChannelContext = GetBackChannelContext(backchannel);
 
     if (IoControlCode != IOCTL_INTERNAL_USB_SUBMIT_URB)
     {
@@ -173,7 +177,7 @@ IoEvtBulkOutUrb(
 
     // try to get us information about a request that may be waiting for this info
     status = WRQueuePushWrite(
-        &(pControllerContext->missionRequest),
+        &(pBackChannelContext->missionRequest),
         transferBuffer,
         transferBufferLength,
         &matchingRead);
@@ -225,9 +229,10 @@ IoEvtBulkInUrb(
     _In_ ULONG IoControlCode
 )
 {
-    WDFDEVICE controller;
-    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
     NTSTATUS status = STATUS_SUCCESS;
+    WDFDEVICE backchannel;
+    PUDECX_BACKCHANNEL_CONTEXT pBackChannelContext;
+    PENDPOINTQUEUE_CONTEXT pEpQContext;
     BOOLEAN bReady = FALSE;
     PUCHAR transferBuffer;
     ULONG transferBufferLength;
@@ -236,8 +241,9 @@ IoEvtBulkInUrb(
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
 
-    controller = WdfIoQueueGetDevice(Queue); /// WdfIoQueueGetDevice
-    pControllerContext = GetUsbControllerContext(controller);
+    pEpQContext = GetEndpointQueueContext(Queue);
+    backchannel = pEpQContext->backChannelDevice;
+    pBackChannelContext = GetBackChannelContext(backchannel);
 
     if (IoControlCode != IOCTL_INTERNAL_USB_SUBMIT_URB)
     {
@@ -257,7 +263,7 @@ IoEvtBulkInUrb(
 
     // try to get us information about a request that may be waiting for this info
     status = WRQueuePullRead(
-        &(pControllerContext->missionCompletion),
+        &(pBackChannelContext->missionCompletion),
         Request,
         transferBuffer,
         transferBufferLength,
@@ -594,7 +600,8 @@ Io_RetrieveEpQueue(
             pQueueRecord);
 
         pEPQContext = GetEndpointQueueContext(*pQueueRecord);
-        pEPQContext->usbDeviceObj = Device;
+        pEPQContext->usbDeviceObj      = Device;
+        pEPQContext->backChannelDevice = wdfController; // this is a dirty little secret, so we contain it.
 
         if (!NT_SUCCESS(status)) {
 

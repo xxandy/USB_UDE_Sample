@@ -35,11 +35,7 @@ Environment:
 
 #include "trace.h"
 
-//
-// Include auto-generated ETW event functions (created by MC.EXE from 
-// osrusbfx2.man)
-//
-#include "fx2Events.h"
+
 
 #ifndef _PRIVATE_H
 #define _PRIVATE_H

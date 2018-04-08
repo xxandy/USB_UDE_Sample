@@ -21,7 +21,7 @@ Environment:
 
 --*/
 
-#include <osrusbfx2.h>
+#include <hostude.h>
 
 #include "ioctl.tmh"
 
@@ -425,10 +425,6 @@ Return Value:
     //
 
     activity = DeviceToActivityId(WdfObjectContextGetObject(DevContext));
-    EventWriteDeviceReenumerated(&activity,
-                                 DevContext->DeviceName,
-                                 DevContext->Location,
-                                 status);
 
     return status;
 

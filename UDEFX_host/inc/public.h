@@ -25,7 +25,7 @@ Environment:
 #include <initguid.h>
 
 // {573E8C73-0CB4-4471-A1BF-FAB26C31D384}
-DEFINE_GUID(GUID_DEVINTERFACE_OSRUSBFX2, 
+DEFINE_GUID(GUID_DEVINTERFACE_HOSTUDE, 
             0x5ad9d323, 0xc478, 0x4ad2, 0xb6, 0x39, 0x9d, 0x2e, 0xdd, 0xbd, 0x3b, 0x2c );
 
 

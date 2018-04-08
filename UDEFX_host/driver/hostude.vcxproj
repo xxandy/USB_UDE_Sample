@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{837F98CF-D3A4-472C-BACC-47950340E57B}</ProjectGuid>
+    <ProjectGuid>{22E6FB5D-9B01-443D-A641-B25B62454080}</ProjectGuid>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
     <SupportsPackaging>false</SupportsPackaging>
@@ -84,17 +84,7 @@
       <WppTraceFunction>TraceEvents(LEVEL,FLAGS,MSG,...)</WppTraceFunction>
       <WppGenerateUsingTemplateFile>{km-WdfDefault.tpl}*.tmh</WppGenerateUsingTemplateFile>
     </ClCompile>
-    <MessageCompile Include="osrusbfx2.man">
-      <GenerateKernelModeLoggingMacros>true</GenerateKernelModeLoggingMacros>
-      <GenerateMofFile>true</GenerateMofFile>
-      <HeaderFilePath>.\$(IntDir)</HeaderFilePath>
-      <GeneratedHeaderPath>true</GeneratedHeaderPath>
-      <RCFilePath>.\$(IntDir)</RCFilePath>
-      <GeneratedRCAndMessagesPath>true</GeneratedRCAndMessagesPath>
-      <GeneratedFilesBaseName>fx2Events</GeneratedFilesBaseName>
-      <UseBaseNameOfInput>true</UseBaseNameOfInput>
-    </MessageCompile>
-    <OtherWpp Include="osrusbfx2.rc">
+    <OtherWpp Include="hostude.rc">
       <WppEnabled>true</WppEnabled>
       <WppKernelMode>true</WppKernelMode>
       <WppTraceFunction>TraceEvents(LEVEL,FLAGS,MSG,...)</WppTraceFunction>
@@ -102,16 +92,16 @@
     </OtherWpp>
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <TargetName>osrusbfx2</TargetName>
+    <TargetName>hostude</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>osrusbfx2</TargetName>
+    <TargetName>hostude</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <TargetName>osrusbfx2</TargetName>
+    <TargetName>hostude</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <TargetName>osrusbfx2</TargetName>
+    <TargetName>hostude</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ResourceCompile>
@@ -249,10 +239,10 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ResourceCompile Include="osrusbfx2.rc" />
+    <ResourceCompile Include="hostude.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="osrusbfx2.inx" />
+    <Inf Include="hostude.inx" />
     <FilesToPackage Include="$(TargetPath)" Condition="'$(ConfigurationType)'=='Driver' or '$(ConfigurationType)'=='DynamicLibrary'" />
   </ItemGroup>
   <ItemGroup>
