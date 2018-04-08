@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Exe", "Exe", "{4B2BB962-B51
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hostude", "driver\hostude.vcxproj", "{22E6FB5D-9B01-443D-A641-B25B62454080}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hostude", "exe\osrusbfx2.vcxproj", "{6EED5CDD-5526-40DC-97F9-582857E10187}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hostudetest", "exe\hostudetest.vcxproj", "{115D2060-2481-43EE-A105-C8E4237F2AAF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,21 +27,21 @@ Global
 		{22E6FB5D-9B01-443D-A641-B25B62454080}.Release|Win32.Build.0 = Release|Win32
 		{22E6FB5D-9B01-443D-A641-B25B62454080}.Release|x64.ActiveCfg = Release|x64
 		{22E6FB5D-9B01-443D-A641-B25B62454080}.Release|x64.Build.0 = Release|x64
-		{6EED5CDD-5526-40DC-97F9-582857E10187}.Debug|Win32.ActiveCfg = Debug|Win32
-		{6EED5CDD-5526-40DC-97F9-582857E10187}.Debug|Win32.Build.0 = Debug|Win32
-		{6EED5CDD-5526-40DC-97F9-582857E10187}.Debug|x64.ActiveCfg = Debug|x64
-		{6EED5CDD-5526-40DC-97F9-582857E10187}.Debug|x64.Build.0 = Debug|x64
-		{6EED5CDD-5526-40DC-97F9-582857E10187}.Release|Win32.ActiveCfg = Release|Win32
-		{6EED5CDD-5526-40DC-97F9-582857E10187}.Release|Win32.Build.0 = Release|Win32
-		{6EED5CDD-5526-40DC-97F9-582857E10187}.Release|x64.ActiveCfg = Release|x64
-		{6EED5CDD-5526-40DC-97F9-582857E10187}.Release|x64.Build.0 = Release|x64
+		{115D2060-2481-43EE-A105-C8E4237F2AAF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{115D2060-2481-43EE-A105-C8E4237F2AAF}.Debug|Win32.Build.0 = Debug|Win32
+		{115D2060-2481-43EE-A105-C8E4237F2AAF}.Debug|x64.ActiveCfg = Debug|x64
+		{115D2060-2481-43EE-A105-C8E4237F2AAF}.Debug|x64.Build.0 = Debug|x64
+		{115D2060-2481-43EE-A105-C8E4237F2AAF}.Release|Win32.ActiveCfg = Release|Win32
+		{115D2060-2481-43EE-A105-C8E4237F2AAF}.Release|Win32.Build.0 = Release|Win32
+		{115D2060-2481-43EE-A105-C8E4237F2AAF}.Release|x64.ActiveCfg = Release|x64
+		{115D2060-2481-43EE-A105-C8E4237F2AAF}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{22E6FB5D-9B01-443D-A641-B25B62454080} = {BCB7D745-20C8-48E1-A792-F708EF65B29F}
-		{6EED5CDD-5526-40DC-97F9-582857E10187} = {4B2BB962-B51B-42F1-9EF7-06025B7A8E83}
+		{115D2060-2481-43EE-A105-C8E4237F2AAF} = {4B2BB962-B51B-42F1-9EF7-06025B7A8E83}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {505FD915-E2E9-4C85-AE13-28D2F2BA4CC0}
