@@ -56,6 +56,11 @@ while(__pragma(warning(disable:4127)) a __pragma(warning(disable:4127)))
 #define READER_TYPE   1
 #define WRITER_TYPE   2
 
+
+#define MISSION_SUCCEEDED 10
+#define MISSION_FAILED 12
+
+
 BOOL G_fDumpUsbConfig = FALSE;    // flags set in response to console command line switches
 BOOL G_fRead = FALSE;
 BOOL G_fWrite = FALSE;
@@ -63,6 +68,10 @@ BOOL G_fGetDeviceInterrupt = FALSE;
 BOOL G_fGenerateVirtualDeviceIntr = FALSE;
 BOOL G_fMission = TRUE;
 char *G_WriteText = "DefaultWrite";
+
+BOOL G_fAutoBot = FALSE;
+BOOL G_fCommandTrip = FALSE;
+
 DEVICE_INTR_FLAGS G_IntrValue = 0;
 
 BOOL
@@ -229,11 +238,15 @@ Return Value:
     printf("Usage for osrusbfx2 testapp:\n");
     printf("-r <mission|response>\n");
     printf("-w <mission|response> [text] where n is number of bytes to write\n");
+
+
     printf("-i [n] where n is an hex number to send as INTERRUPT/IN from virtual device\n");
     printf("-v verbose -- dumps read data\n");
     printf("-p receive device interrupt\n");
     printf("-u to dump USB configuration and pipe info \n");
 
+    printf("-a  -- autonomous back-channel agent(continuously wait for mission and complete)\n");
+    printf("-c [text] -- send one command to autonomous agent (-a)\n");
     return;
 }
 
@@ -301,6 +314,24 @@ Return Value:
             case 'p':
             case 'P':
                 G_fGetDeviceInterrupt = TRUE;
+                break;
+
+
+            case 'a':
+            case 'A':
+                G_fAutoBot = TRUE;
+                break;
+            case 'c':
+            case 'C':
+                if (i + 1 >= argc) {
+                    Usage();
+                    exit(1);
+                }
+                else {
+                    G_fCommandTrip = TRUE;
+                    G_WriteText = argv[i + 1];
+                }
+                i++;
                 break;
 
             case 'i':
@@ -495,6 +526,158 @@ GetDeviceInterrupt()
 
 
 
+void
+AutoBot(LPCGUID guid)
+{
+    HANDLE deviceHandle;
+    DWORD  nBytesRead = 0;
+    DWORD nBytesWritten = 0;
+    char   buffer[250];
+    BOOL   success;
+    DEVICE_INTR_FLAGS  value = 0;
+    ULONG           index = 0;
+
+    printf("About to open device\n"); fflush(stdout);
+
+    deviceHandle = OpenDevice(guid);
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find device!\n"); fflush(stdout);
+
+        return;
+
+    }
+
+    printf("Device open Successfully!\n"); fflush(stdout);
+
+    for (;; )
+    {
+        printf("\n\n\nWaiting for new mission...\n"); fflush(stdout);
+
+        success = ReadFile(deviceHandle, buffer, sizeof(buffer), &nBytesRead, NULL);
+        if (!success) {
+            printf("ReadFile failed - error %d\n", GetLastError());
+            continue;
+        }
+
+        buffer[(sizeof(buffer) / sizeof(buffer[0])) - 1] = 0;
+        printf("Got a Mission!!, text=%s, bytes=%d\n", buffer, nBytesRead);
+        for (int x = 0; x < 3; ++x)
+        {
+            printf("Working on the mission.. ticktock...\n"); fflush(stdout);
+            Sleep(1500);
+        }
+
+
+
+        strncat_s(buffer, (sizeof(buffer) / sizeof(buffer[0])),
+            "_response", _TRUNCATE );
+        buffer[(sizeof(buffer) / sizeof(buffer[0])) - 1] = 0;
+
+        printf("About to transmit response\n"); fflush(stdout);
+        success = WriteFile(deviceHandle, buffer, (DWORD)(strlen(buffer) + 1), &nBytesWritten, NULL);
+        if (!success) {
+            printf("WriteFile failed - error %d\n", GetLastError());
+            continue;
+        }
+
+        value = MISSION_SUCCEEDED; // means done
+
+
+        printf("Response stored, will generate interrupt!\n"); fflush(stdout);
+
+        if (!DeviceIoControl(deviceHandle,
+            IOCTL_UDEFX2_GENERATE_INTERRUPT,
+            &value,                // Ptr to InBuffer
+            sizeof(value),         // Length of InBuffer
+            NULL,                  // Ptr to OutBuffer
+            0,                     // Length of OutBuffer
+            &index,                // BytesReturned
+            0))
+        {                  // Ptr to Overlapped structure
+            printf("DeviceIoControl failed with error 0x%x\n", GetLastError());
+            continue;
+        }
+
+        printf("Notification succeeded!\n");
+
+    }
+
+}
+
+
+
+
+
+BOOL
+CommandTrip(LPCGUID guid, const char *commandStr)
+{
+    HANDLE deviceHandle;
+    DWORD  nBytesRead = 0;
+    DWORD nBytesWritten = 0;
+    char   buffer[250];
+    BOOL   success;
+    DEVICE_INTR_FLAGS  value = 0;
+    ULONG           index = 0;
+
+    printf("About to open device\n"); fflush(stdout);
+
+    deviceHandle = OpenDevice(guid);
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find device!\n"); fflush(stdout);
+
+        return FALSE;
+
+    }
+
+    printf("Device open Successfully!\n"); fflush(stdout);
+    success = WriteFile(deviceHandle, commandStr, (DWORD)(strlen(commandStr) + 1), &nBytesWritten, NULL);
+    if (!success) {
+        printf("WriteFile failed - error %d\n", GetLastError());
+        goto exit;
+    }
+
+    printf("Mission sent with %d bytes, waiting for response interrupt...\n", nBytesWritten);
+
+    if (!DeviceIoControl(deviceHandle,
+        IOCTL_OSRUSBFX2_GET_INTERRUPT_MESSAGE,
+        NULL,                  // Ptr to InBuffer
+        0,                     // Length of InBuffer
+        &value,           // Ptr to OutBuffer
+        sizeof(value),    // Length of OutBuffer
+        &index,                // BytesReturned
+        0)) {                  // Ptr to Overlapped structure
+        printf("DeviceIoControl failed with error 0x%x\n", GetLastError());
+        goto exit;
+    }
+
+    if (index != sizeof(value) || (value != MISSION_SUCCEEDED))
+    {
+        printf("Interrupt indicates error! size=%d value=%x\n", index, value );
+        goto exit;
+    }
+
+    printf("Interrupt indicates success! Will get response\n");
+
+    success = ReadFile(deviceHandle, buffer, sizeof(buffer), &nBytesRead, NULL);
+    if (!success) {
+        printf("ReadFile failed - error %d\n", GetLastError());
+        goto exit;
+    }
+
+    buffer[(sizeof(buffer) / sizeof(buffer[0])) - 1] = 0;
+    printf("Got a Response!!, text=%s, bytes=%d\n", buffer, nBytesRead);
+
+exit:
+    CloseHandle(deviceHandle);
+    return TRUE;
+}
+
+
+
 int
 _cdecl
 main(
@@ -520,22 +703,23 @@ Return Value:
 {
     int    retValue = 0;
 
-    printf("About parse\n"); fflush(stdout);
     Parse(argc, argv );
-    printf("Done parsing\n"); fflush(stdout);
 
     //
     // dump USB configuation and pipe info
     //
     if (G_fDumpUsbConfig) {
         DumpUsbConfig();
-    } else if (G_fGetDeviceInterrupt)   {
+    }
+    else if (G_fGetDeviceInterrupt) {
         printf("About to get device interrupt\n"); fflush(stdout);
         GetDeviceInterrupt();
-    } else if (G_fGenerateVirtualDeviceIntr)  {
+    }
+    else if (G_fGenerateVirtualDeviceIntr) {
         printf("About to generate device interrupt\n"); fflush(stdout);
         GenerateDeviceInterrupt(G_IntrValue);
-    } else if (G_fWrite)  {
+    }
+    else if (G_fWrite) {
         LPCGUID dguid = (G_fMission ? &GUID_DEVINTERFACE_OSRUSBFX2 : &GUID_DEVINTERFACE_UDEFX2);
         printf("About to write %s %s\n", (G_fMission ? "mission" : "response"), G_WriteText); fflush(stdout);
         WriteTextTo(dguid, G_WriteText);
@@ -543,7 +727,12 @@ Return Value:
     else if (G_fRead) {
         LPCGUID dguid = (G_fMission ? &GUID_DEVINTERFACE_UDEFX2 : &GUID_DEVINTERFACE_OSRUSBFX2);
         printf("About to read %s\n", (G_fMission ? "mission" : "response")); fflush(stdout);
-        ReadTextFrom(dguid );
+        ReadTextFrom(dguid);
+    } else if (G_fAutoBot) {
+        AutoBot(&GUID_DEVINTERFACE_UDEFX2);
+    }
+    else if (G_fCommandTrip) {
+        CommandTrip(&GUID_DEVINTERFACE_OSRUSBFX2, G_WriteText);
     } else  {
         retValue = 1;
         Usage();
