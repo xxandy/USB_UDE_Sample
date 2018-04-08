@@ -1,4 +1,4 @@
-# USB UDE Sample
+*# USB UDE Sample
 UDE (USB Device Emulation) Virtual USB device sample (hardware-less), with matching Host-Side drivers. Used as a USB study test bed. Can also be the starting point for developing other Virtual USB devices.
 
 This project is a reference/sample that serves to illustrate programming UDE (USB Device Emulation) devices, per the architecture at infrastructure Windows provides at https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-emulated-device--ude--architecture
@@ -32,11 +32,11 @@ It is especially instructional to watch the traces during install/uninstall of t
 Once the drivers are installed, you can test them with the test app, which is also stoken from the WDK sample and modified.  It can be used a few ways:
 
 *FULL BLOWN TEST*
-* *hostudetest.exe -a   (goes into a loop waiting for commands over USB)
+* *hostudetest.exe -a*   (goes into a loop waiting for commands over USB)
 * *hostudetest.exe -c somemission*   
-** sends "somemission" over BULK/OUT
-**  waits for an interrupt on INTERRUPT/IN
-** finally  then reads USB/IN for response to the mission
+1) sends "somemission" over BULK/OUT
+2)  waits for an interrupt on INTERRUPT/IN
+3) finally  then reads USB/IN for response to the mission
 
 *INTERRUPT ONLY TEST*
 * *hostudetest.exe -i abc* (generates an INTERRUPT/IN transfer with a 4-byte little-endian payload matching the hexadecimal parameter provided)
