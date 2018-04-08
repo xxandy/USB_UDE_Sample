@@ -304,7 +304,7 @@ Return Value:
     // Register a device interface so that app can find our device and talk to it.
     //
     status = WdfDeviceCreateDeviceInterface(device,
-                                            (LPGUID) &GUID_DEVINTERFACE_OSRUSBFX2,
+                                            (LPGUID) &GUID_DEVINTERFACE_HOSTUDE,
                                             NULL); // Reference String
 
     if (!NT_SUCCESS(status)) {
@@ -346,7 +346,7 @@ Return Value:
         }
 
         status = WdfDeviceRetrieveDeviceInterfaceString(device,
-                                                        (LPGUID) &GUID_DEVINTERFACE_OSRUSBFX2,
+                                                        (LPGUID) &GUID_DEVINTERFACE_HOSTUDE,
                                                         NULL,
                                                         symbolicLinkString);
 

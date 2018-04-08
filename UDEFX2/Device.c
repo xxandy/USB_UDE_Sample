@@ -156,7 +156,7 @@ Return Value:
 
     // create a 2nd interface for back-channel interaction with the controller
     status = WdfDeviceCreateDeviceInterface(wdfDevice,
-        (LPGUID)&GUID_DEVINTERFACE_UDEFX2,
+        (LPGUID)&GUID_DEVINTERFACE_UDE_BACKCHANNEL,
         NULL);
 
     if (!NT_SUCCESS(status)) {

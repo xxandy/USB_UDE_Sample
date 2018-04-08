@@ -13,7 +13,13 @@ Module Name:
 
 Abstract:
 
-    Console test app for osrusbfx2 driver.
+    Console test app for HOSTUDE driver and for UDEFX2 driver.
+	This app can send commands to two drivers:
+	   - HOSTUDE - host-side driver for the Virtual USB device
+	   - UDEFX2 (back-channel)  -  test interface used to feed info/get info
+         from the UDEFX2 device side, by means other than USB. 
+		 Back-channel is used as scaffolding to test the USB interface  
+		 between HOSTUDE and UDEFX2.
 
 Environment:
 
@@ -439,7 +445,7 @@ GenerateDeviceInterrupt(DEVICE_INTR_FLAGS value)
 
     printf("About to open device\n"); fflush(stdout);
 
-    deviceHandle = OpenDevice((LPGUID)&GUID_DEVINTERFACE_UDEFX2);
+    deviceHandle = OpenDevice((LPGUID)&GUID_DEVINTERFACE_UDE_BACKCHANNEL);
 
     if (deviceHandle == INVALID_HANDLE_VALUE) {
 
@@ -488,7 +494,7 @@ GetDeviceInterrupt()
 
     printf("About to open device\n"); fflush(stdout);
 
-    deviceHandle = OpenDevice((LPGUID)&GUID_DEVINTERFACE_OSRUSBFX2 );
+    deviceHandle = OpenDevice((LPGUID)&GUID_DEVINTERFACE_HOSTUDE );
 
     if (deviceHandle == INVALID_HANDLE_VALUE) {
 
@@ -720,19 +726,19 @@ Return Value:
         GenerateDeviceInterrupt(G_IntrValue);
     }
     else if (G_fWrite) {
-        LPCGUID dguid = (G_fMission ? &GUID_DEVINTERFACE_OSRUSBFX2 : &GUID_DEVINTERFACE_UDEFX2);
+        LPCGUID dguid = (G_fMission ? &GUID_DEVINTERFACE_HOSTUDE : &GUID_DEVINTERFACE_UDE_BACKCHANNEL);
         printf("About to write %s %s\n", (G_fMission ? "mission" : "response"), G_WriteText); fflush(stdout);
         WriteTextTo(dguid, G_WriteText);
     }
     else if (G_fRead) {
-        LPCGUID dguid = (G_fMission ? &GUID_DEVINTERFACE_UDEFX2 : &GUID_DEVINTERFACE_OSRUSBFX2);
+        LPCGUID dguid = (G_fMission ? &GUID_DEVINTERFACE_UDE_BACKCHANNEL : &GUID_DEVINTERFACE_HOSTUDE);
         printf("About to read %s\n", (G_fMission ? "mission" : "response")); fflush(stdout);
         ReadTextFrom(dguid);
     } else if (G_fAutoBot) {
-        AutoBot(&GUID_DEVINTERFACE_UDEFX2);
+        AutoBot(&GUID_DEVINTERFACE_UDE_BACKCHANNEL);
     }
     else if (G_fCommandTrip) {
-        CommandTrip(&GUID_DEVINTERFACE_OSRUSBFX2, G_WriteText);
+        CommandTrip(&GUID_DEVINTERFACE_HOSTUDE, G_WriteText);
     } else  {
         retValue = 1;
         Usage();

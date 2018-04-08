@@ -20,7 +20,7 @@ Environment:
 // Define an Interface Guid so that apps can find the device and talk to it.
 //
 
-DEFINE_GUID(GUID_DEVINTERFACE_UDEFX2,
+DEFINE_GUID(GUID_DEVINTERFACE_UDE_BACKCHANNEL,
     0x18b07599, 0x2515, 0x4c18, 0xb9, 0xe3, 0x6e, 0x16, 0xf8, 0x2a, 0xb4, 0x7f);
 
 
