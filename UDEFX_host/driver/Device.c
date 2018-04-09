@@ -33,7 +33,6 @@ Environment:
 #pragma alloc_text(PAGE, OsrFxEvtDeviceD0Exit)
 #pragma alloc_text(PAGE, SelectInterfaces)
 #pragma alloc_text(PAGE, OsrFxSetPowerPolicy)
-#pragma alloc_text(PAGE, GetDeviceEventLoggingNames)
 #pragma alloc_text(PAGE, OsrFxValidateConfigurationDescriptor)
 #endif
 
@@ -71,7 +70,6 @@ Return Value:
     WDF_IO_QUEUE_CONFIG                 ioQueueConfig;
     PDEVICE_CONTEXT                     pDevContext;
     WDFQUEUE                            queue;
-    GUID                                activity;
     UNICODE_STRING                      symbolicLinkName;
     WDFSTRING                           symbolicLinkString = NULL;
     DEVPROP_BOOLEAN                     isRestricted;
@@ -125,23 +123,10 @@ Return Value:
     }
 
     //
-    // Setup the activity ID so that we can log events using it.
-    //
-
-    activity = DeviceToActivityId(device);
-
-    //
     // Get the DeviceObject context by using accessor function specified in
     // the WDF_DECLARE_CONTEXT_TYPE_WITH_NAME macro for DEVICE_CONTEXT.
     //
     pDevContext = GetDeviceContext(device);
-
-    //
-    // Get the device's friendly name and location so that we can use it in
-    // error logging.  If this fails then it will setup dummy strings.
-    //
-
-    GetDeviceEventLoggingNames(device);
 
     //
     // Tell the framework to set the SurpriseRemovalOK in the DeviceCaps so
@@ -947,99 +932,6 @@ Return Value:
     return status;
 }
 
-_IRQL_requires_(PASSIVE_LEVEL)
-VOID
-GetDeviceEventLoggingNames(
-    _In_ WDFDEVICE Device
-    )
-/*++
-
-Routine Description:
-
-    Retrieve the friendly name and the location string into WDFMEMORY objects
-    and store them in the device context.
-
-Arguments:
-
-Return Value:
-
-    None
-
---*/
-{
-    PDEVICE_CONTEXT pDevContext = GetDeviceContext(Device);
-
-    WDF_OBJECT_ATTRIBUTES objectAttributes;
-
-    WDFMEMORY deviceNameMemory = NULL;
-    WDFMEMORY locationMemory = NULL;
-
-    NTSTATUS status;
-
-    PAGED_CODE();
-
-    //
-    // We want both memory objects to be children of the device so they will
-    // be deleted automatically when the device is removed.
-    //
-
-    WDF_OBJECT_ATTRIBUTES_INIT(&objectAttributes);
-    objectAttributes.ParentObject = Device;
-
-    //
-    // First get the length of the string. If the FriendlyName
-    // is not there then get the lenght of device description.
-    //
-
-    status = WdfDeviceAllocAndQueryProperty(Device,
-                                            DevicePropertyFriendlyName,
-                                            NonPagedPoolNx,
-                                            &objectAttributes,
-                                            &deviceNameMemory);
-
-    if (!NT_SUCCESS(status))
-    {
-        status = WdfDeviceAllocAndQueryProperty(Device,
-                                                DevicePropertyDeviceDescription,
-                                                NonPagedPoolNx,
-                                                &objectAttributes,
-                                                &deviceNameMemory);
-    }
-
-    if (NT_SUCCESS(status))
-    {
-        pDevContext->DeviceNameMemory = deviceNameMemory;
-        pDevContext->DeviceName = WdfMemoryGetBuffer(deviceNameMemory, NULL);
-    }
-    else
-    {
-        pDevContext->DeviceNameMemory = NULL;
-        pDevContext->DeviceName = L"(error retrieving name)";
-    }
-
-    //
-    // Retrieve the device location string.
-    //
-
-    status = WdfDeviceAllocAndQueryProperty(Device,
-                                            DevicePropertyLocationInformation,
-                                            NonPagedPoolNx,
-                                            WDF_NO_OBJECT_ATTRIBUTES,
-                                            &locationMemory);
-
-    if (NT_SUCCESS(status))
-    {
-        pDevContext->LocationMemory = locationMemory;
-        pDevContext->Location = WdfMemoryGetBuffer(locationMemory, NULL);
-    }
-    else
-    {
-        pDevContext->LocationMemory = NULL;
-        pDevContext->Location = L"(error retrieving location)";
-    }
-
-    return;
-}
 
 _IRQL_requires_(PASSIVE_LEVEL)
 PCHAR

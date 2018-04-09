@@ -43,7 +43,6 @@ Environment:
 
 #include "driver.tmh"
 
-PFN_IO_GET_ACTIVITY_ID_IRP g_pIoGetActivityIdIrp;
 PFN_IO_SET_DEVICE_INTERFACE_PROPERTY_DATA g_pIoSetDeviceInterfacePropertyData;
 
 #ifdef ALLOC_PRAGMA
@@ -93,15 +92,6 @@ Return Value:
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_INIT,
                        "OSRUSBFX2 Driver Sample - Driver Framework Edition.\n");
-
-    //
-    // IRP activity ID functions are available on some versions, save them into
-    // globals (or NULL if not available)
-    //
-    RtlInitUnicodeString(&funcName, L"IoGetActivityIdIrp");
-    g_pIoGetActivityIdIrp = (PFN_IO_GET_ACTIVITY_ID_IRP) (ULONG_PTR)
-        MmGetSystemRoutineAddress(&funcName);
-
     //
     // The Device interface property set is available on some version, save it
     // into globals (or NULL if not available)
