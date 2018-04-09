@@ -170,7 +170,10 @@ Return Value:
 
 	status = UdecxWdfDeviceAddUsbDeviceEmulation(wdfDevice,
 		&controllerConfig);
-
+    if (!NT_SUCCESS(status)) {
+        LogError(TRACE_DEVICE, "Unable to add USB device emulation, err= %!STATUS!", status);
+        goto exit;
+    }
 	//
 	// Initialize controller data members.
 
@@ -187,11 +190,6 @@ Return Value:
 	KeInitializeEvent(&pControllerContext->ResetCompleteEvent,
 		NotificationEvent,
 		FALSE /* initial state: not signaled */);
-
-	if (!NT_SUCCESS(status)) {
-        LogError(TRACE_DEVICE, "Unable to initialize reset complete, err= %!STATUS!", status);
-		goto exit;
-	}
 
 	//
 	// Create default queue. It only supports USB controller IOCTLs. (USB I/O will come through
