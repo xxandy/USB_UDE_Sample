@@ -38,7 +38,6 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BackChannel.c" />
     <ClCompile Include="Device.c" />
     <ClCompile Include="Driver.c" />
     <ClCompile Include="Misc.c" />
@@ -46,7 +45,6 @@
     <ClCompile Include="usbdevice.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BackChannel.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="Driver.h" />
     <ClInclude Include="Misc.h" />

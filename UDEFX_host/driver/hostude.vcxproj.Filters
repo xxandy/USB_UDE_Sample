@@ -19,7 +19,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="driver.c; device.c; ioctl.c; bulkrwr.c; Interrupt.c">
+    <ClCompile Include="driver.c; device.c; ioctl.c; bulkrwr.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
