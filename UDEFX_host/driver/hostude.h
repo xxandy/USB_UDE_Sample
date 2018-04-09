@@ -41,37 +41,9 @@ Environment:
 #define _PRIVATE_H
 
 #define POOL_TAG (ULONG) 'FRSO'
-#define _DRIVER_NAME_ "OSRUSBFX2"
 
 #define TEST_BOARD_TRANSFER_BUFFER_SIZE (64*1024)
-#define DEVICE_DESC_LENGTH 256
 
-extern const __declspec(selectany) LONGLONG DEFAULT_CONTROL_TRANSFER_TIMEOUT = 5 * -1 * WDF_TIMEOUT_TO_SEC;
-
-//
-// Define the vendor commands supported by our device
-//
-#define USBFX2LK_READ_7SEGMENT_DISPLAY      0xD4
-#define USBFX2LK_READ_SWITCHES              0xD6
-#define USBFX2LK_READ_BARGRAPH_DISPLAY      0xD7
-#define USBFX2LK_SET_BARGRAPH_DISPLAY       0xD8
-#define USBFX2LK_IS_HIGH_SPEED              0xD9
-#define USBFX2LK_REENUMERATE                0xDA
-#define USBFX2LK_SET_7SEGMENT_DISPLAY       0xDB
-
-//
-// Define the features that we can clear
-//  and set on our device
-//
-#define USBFX2LK_FEATURE_EPSTALL            0x00
-#define USBFX2LK_FEATURE_WAKE               0x01
-
-//
-// Order of endpoints in the interface descriptor
-//
-#define INTERRUPT_IN_ENDPOINT_INDEX    0
-#define BULK_OUT_ENDPOINT_INDEX        1
-#define BULK_IN_ENDPOINT_INDEX         2
 
 
 //
@@ -195,12 +167,6 @@ _IRQL_requires_(PASSIVE_LEVEL)
 NTSTATUS
 SelectInterfaces(
     _In_ WDFDEVICE Device
-    );
-
-_IRQL_requires_(PASSIVE_LEVEL)
-NTSTATUS
-ReenumerateDevice(
-    _In_ PDEVICE_CONTEXT DevContext
     );
 
 

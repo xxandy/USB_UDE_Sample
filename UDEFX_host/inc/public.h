@@ -60,12 +60,6 @@ typedef DEVICE_INTR_FLAGS* PDEVICE_INTR_FLAGS;
                                                      METHOD_BUFFERED,         \
                                                      FILE_WRITE_ACCESS)
 
-#define IOCTL_OSRUSBFX2_REENUMERATE_DEVICE  CTL_CODE(FILE_DEVICE_OSRUSBFX2, \
-                                                    IOCTL_INDEX  + 3,  \
-                                                    METHOD_BUFFERED, \
-                                                    FILE_WRITE_ACCESS)
-
-
 #define IOCTL_OSRUSBFX2_GET_INTERRUPT_MESSAGE CTL_CODE(FILE_DEVICE_OSRUSBFX2,\
                                                     IOCTL_INDEX + 9, \
                                                     METHOD_OUT_DIRECT, \

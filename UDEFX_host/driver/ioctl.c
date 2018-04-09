@@ -28,7 +28,6 @@ Environment:
 #pragma alloc_text(PAGE, OsrFxEvtIoDeviceControl)
 #pragma alloc_text(PAGE, ResetPipe)
 #pragma alloc_text(PAGE, ResetDevice)
-#pragma alloc_text(PAGE, ReenumerateDevice)
 
 VOID
 OsrFxEvtIoDeviceControl(
@@ -141,18 +140,6 @@ Return Value:
 
         status = ResetDevice(device);
         break;
-
-    case IOCTL_OSRUSBFX2_REENUMERATE_DEVICE:
-
-        //
-        // Otherwise, call our function to reenumerate the
-        //  device
-        //
-        status = ReenumerateDevice(pDevContext);
-
-        bytesReturned = 0;
-        break;
-
 
 
     case IOCTL_OSRUSBFX2_GET_INTERRUPT_MESSAGE:
@@ -357,78 +344,6 @@ Return Value:
     return status;
 }
 
-_IRQL_requires_(PASSIVE_LEVEL)
-NTSTATUS
-ReenumerateDevice(
-    _In_ PDEVICE_CONTEXT DevContext
-    )
-/*++
-
-Routine Description
-
-    This routine re-enumerates the USB device.
-
-Arguments:
-
-    pDevContext - One of our device extensions
-
-Return Value:
-
-    NT status value
-
---*/
-{
-    NTSTATUS status;
-    WDF_USB_CONTROL_SETUP_PACKET    controlSetupPacket;
-    WDF_REQUEST_SEND_OPTIONS        sendOptions;
-    GUID                            activity;
-
-    PAGED_CODE();
-
-    TraceEvents(TRACE_LEVEL_VERBOSE, DBG_IOCTL,"--> ReenumerateDevice\n");
-
-    WDF_REQUEST_SEND_OPTIONS_INIT(
-                                  &sendOptions,
-                                  WDF_REQUEST_SEND_OPTION_TIMEOUT
-                                  );
-
-    WDF_REQUEST_SEND_OPTIONS_SET_TIMEOUT(
-                                         &sendOptions,
-                                         DEFAULT_CONTROL_TRANSFER_TIMEOUT
-                                         );
-
-    WDF_USB_CONTROL_SETUP_PACKET_INIT_VENDOR(&controlSetupPacket,
-                                        BmRequestHostToDevice,
-                                        BmRequestToDevice,
-                                        USBFX2LK_REENUMERATE, // Request
-                                        0, // Value
-                                        0); // Index
-
-
-    status = WdfUsbTargetDeviceSendControlTransferSynchronously(
-                                        DevContext->UsbDevice,
-                                        WDF_NO_HANDLE, // Optional WDFREQUEST
-                                        &sendOptions,
-                                        &controlSetupPacket,
-                                        NULL, // MemoryDescriptor
-                                        NULL); // BytesTransferred
-
-    if(!NT_SUCCESS(status)) {
-        TraceEvents(TRACE_LEVEL_ERROR, DBG_IOCTL,
-                    "ReenumerateDevice: Failed to Reenumerate - 0x%x \n", status);
-    }
-
-    TraceEvents(TRACE_LEVEL_VERBOSE, DBG_IOCTL,"<-- ReenumerateDevice\n");
-
-    //
-    // Send event to eventlog
-    //
-
-    activity = DeviceToActivityId(WdfObjectContextGetObject(DevContext));
-
-    return status;
-
-}
 
 VOID
 OsrCompleteInterruptRequest(
