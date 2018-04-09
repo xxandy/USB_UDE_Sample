@@ -158,14 +158,8 @@ OsrFxEvtUsbInterruptReadersFailed(
     )
 {
     WDFDEVICE device = WdfIoTargetGetDevice(WdfUsbTargetPipeGetIoTarget(Pipe));
-    PDEVICE_CONTEXT pDeviceContext = GetDeviceContext(device);
 
     UNREFERENCED_PARAMETER(UsbdStatus);
-
-    //
-    // Clear the current switch state.
-    //
-    pDeviceContext->CurrentSwitchState = 0;
 
     //
     // Service the pending interrupt switch change request

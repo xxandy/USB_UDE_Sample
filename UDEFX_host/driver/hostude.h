@@ -79,8 +79,6 @@ typedef struct _DEVICE_CONTEXT {
 
     WDFWAITLOCK                     ResetDeviceWaitLock;
 
-    UCHAR                           CurrentSwitchState;
-
     WDFQUEUE                        InterruptMsgQueue;
 
     DEVICE_INTR_STATE               InterruptStatus;
