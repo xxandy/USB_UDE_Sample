@@ -206,6 +206,8 @@ StopAllPipes(
     IN PDEVICE_CONTEXT DeviceContext
     )
 {
+    WdfIoTargetStop(WdfUsbTargetPipeGetIoTarget(DeviceContext->BulkReadPipe),
+                                 WdfIoTargetCancelSentIo);
     WdfIoTargetStop(WdfUsbTargetPipeGetIoTarget(DeviceContext->BulkWritePipe),
                                  WdfIoTargetCancelSentIo);
 }
@@ -216,6 +218,11 @@ StartAllPipes(
     )
 {
     NTSTATUS status;
+
+    status = WdfIoTargetStart(WdfUsbTargetPipeGetIoTarget(DeviceContext->BulkReadPipe));
+    if (!NT_SUCCESS(status)) {
+        return status;
+    }
 
     status = WdfIoTargetStart(WdfUsbTargetPipeGetIoTarget(DeviceContext->BulkWritePipe));
     if (!NT_SUCCESS(status)) {

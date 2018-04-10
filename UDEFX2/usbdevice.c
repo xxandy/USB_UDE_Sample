@@ -61,7 +61,7 @@ const UCHAR g_UsbConfigDescriptorSet[] =
     // Configuration Descriptor Type
     0x9,                              // Descriptor Size
     USB_CONFIGURATION_DESCRIPTOR_TYPE, // Configuration Descriptor Type
-    0x19, 0x00,                        // Length of this descriptor and all sub descriptors
+    0x20, 0x00,                        // Length of this descriptor and all sub descriptors
     0x1,                               // Number of interfaces
     0x01,                              // Configuration number
     0x00,                              // Configuration string index
@@ -73,7 +73,7 @@ const UCHAR g_UsbConfigDescriptorSet[] =
         USB_INTERFACE_DESCRIPTOR_TYPE,             // Interface Association Descriptor Type
         0,                                        // bInterfaceNumber
         0,                                        // bAlternateSetting
-        1,                                        // bNumEndpoints
+        2,                                        // bNumEndpoints
         0xFF,                                     // bInterfaceClass
         0x00,                                     // bInterfaceSubClass
         0x00,                                     // bInterfaceProtocol
@@ -85,8 +85,15 @@ const UCHAR g_UsbConfigDescriptorSet[] =
         g_BulkOutEndpointAddress,       // bEndpointAddress
         USB_ENDPOINT_TYPE_BULK,         // bmAttributes - bulk
         0x00, 0x2,                      // wMaxPacketSize
-        0x00                            // bInterval
+        0x00,                           // bInterval
 
+        // Bulk IN endpoint descriptor
+        0x07,                           // Descriptor size 
+        USB_ENDPOINT_DESCRIPTOR_TYPE,   // Descriptor type
+        g_BulkInEndpointAddress,        // Endpoint address and description
+        USB_ENDPOINT_TYPE_BULK,         // bmAttributes - bulk
+        0x00, 0x02,                     // Max packet size
+        0x00,                           // Servicing interval for data transfers : NA for bulk
 };
 
 
@@ -334,6 +341,15 @@ Usb_ReadDescriptorsAndPlugIn(
     status = UsbCreateEndpointObj(controllerContext->ChildDevice,
         g_BulkOutEndpointAddress, 
         &(deviceContext->UDEFX2BulkOutEndpoint) );
+
+    if (!NT_SUCCESS(status)) {
+
+        goto exit;
+    }
+
+    status = UsbCreateEndpointObj(controllerContext->ChildDevice,
+        g_BulkInEndpointAddress,
+        &(deviceContext->UDEFX2BulkInEndpoint));
 
     if (!NT_SUCCESS(status)) {
 

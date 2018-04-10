@@ -26,6 +26,7 @@ Abstract:
 typedef struct _IO_CONTEXT {
     WDFQUEUE          ControlQueue;
     WDFQUEUE          BulkOutQueue;
+    WDFQUEUE          BulkInQueue;
     BOOLEAN           bStopping;
 
 } IO_CONTEXT, *PIO_CONTEXT;

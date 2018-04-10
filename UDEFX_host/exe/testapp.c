@@ -68,6 +68,7 @@ while(__pragma(warning(disable:4127)) a __pragma(warning(disable:4127)))
 
 
 BOOL G_fDumpUsbConfig = FALSE;    // flags set in response to console command line switches
+BOOL G_fRead = FALSE;
 BOOL G_fWrite = FALSE;
 char *G_WriteText = "DefaultWrite";
 
@@ -235,6 +236,7 @@ Return Value:
 
 {
     printf("Usage for osrusbfx2 testapp:\n");
+    printf("-r\n");
     printf("-w [text] where n is number of bytes to write\n");
 
 
@@ -276,6 +278,10 @@ Return Value:
         if (argv[i][0] == '-' ||
             argv[i][0] == '/') {
             switch(argv[i][1]) {
+            case 'r':
+            case 'R':
+                G_fRead = TRUE;
+                break;
             case 'w':
             case 'W':
                 if (i+1 >= argc) {
@@ -337,6 +343,39 @@ WriteTextTo(LPCGUID guid, const char *pText )
 
 
 
+BOOL
+ReadTextFrom(LPCGUID guid)
+{
+    HANDLE deviceHandle;
+    DWORD  nBytesRead = 0;
+    char   buffer[250];
+    BOOL   success;
+
+    printf("About to open device\n"); fflush(stdout);
+
+    deviceHandle = OpenDevice(guid);
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find device!\n"); fflush(stdout);
+
+        return FALSE;
+
+    }
+
+    printf("Device open, read...\n"); fflush(stdout);
+
+    success = ReadFile( deviceHandle, buffer, sizeof(buffer), &nBytesRead, NULL);
+    if (!success) {
+        printf("ReadFile failed - error %d\n", GetLastError());
+    } else {
+        buffer[(sizeof(buffer) / sizeof(buffer[0])) - 1] = 0;
+        printf("ReadFile SUCCESS, text=%s, bytes=%d\n", buffer, nBytesRead);
+    }
+
+    CloseHandle(deviceHandle);
+    return TRUE;
+}
 
 int
 _cdecl
@@ -375,6 +414,10 @@ Return Value:
         LPCGUID dguid = &GUID_DEVINTERFACE_HOSTUDE;
         printf("About to write %s\n", G_WriteText); fflush(stdout);
         WriteTextTo(dguid, G_WriteText);
+    } else if (G_fRead) {
+        LPCGUID dguid = &GUID_DEVINTERFACE_HOSTUDE;
+        printf("About to read\n"); fflush(stdout);
+        ReadTextFrom(dguid);
     } else  {
         retValue = 1;
         Usage();

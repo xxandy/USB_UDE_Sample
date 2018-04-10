@@ -178,6 +178,42 @@ Return Value:
         goto Error;
     }
 
+    //
+    // We will create a separate sequential queue and configure it
+    // to receive read requests.  We also need to register a EvtIoStop
+    // handler so that we can acknowledge requests that are pending
+    // at the target driver.
+    //
+    WDF_IO_QUEUE_CONFIG_INIT(&ioQueueConfig, WdfIoQueueDispatchSequential);
+
+    ioQueueConfig.EvtIoRead = OsrFxEvtIoRead;
+    ioQueueConfig.EvtIoStop = OsrFxEvtIoStop;
+
+    status = WdfIoQueueCreate(
+                 device,
+                 &ioQueueConfig,
+                 WDF_NO_OBJECT_ATTRIBUTES,
+                 &queue // queue handle
+             );
+
+    if (!NT_SUCCESS (status)) {
+        TraceEvents(TRACE_LEVEL_ERROR, DBG_PNP,
+            "WdfIoQueueCreate failed 0x%x\n", status);
+        goto Error;
+    }
+
+    status = WdfDeviceConfigureRequestDispatching(
+                    device,
+                    queue,
+                    WdfRequestTypeRead);
+
+    if(!NT_SUCCESS (status)){
+        NT_ASSERT(NT_SUCCESS(status));
+        TraceEvents(TRACE_LEVEL_ERROR, DBG_PNP,
+                    "WdfDeviceConfigureRequestDispatching failed 0x%x\n", status);
+        goto Error;
+    }
+
 
     //
     // We will create another sequential queue and configure it
@@ -794,6 +830,13 @@ Return Value:
         WdfUsbTargetPipeSetNoMaximumPacketSizeCheck(pipe);
 
         if(WdfUsbPipeTypeBulk == pipeInfo.PipeType &&
+                WdfUsbTargetPipeIsInEndpoint(pipe)) {
+            TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTL,
+                    "BulkInput Pipe is 0x%p\n", pipe);
+            pDeviceContext->BulkReadPipe = pipe;
+        }
+
+        if(WdfUsbPipeTypeBulk == pipeInfo.PipeType &&
                 WdfUsbTargetPipeIsOutEndpoint(pipe)) {
             TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTL,
                     "BulkOutput Pipe is 0x%p\n", pipe);
@@ -805,7 +848,8 @@ Return Value:
     //
     // If we didn't find all the 3 pipes, fail the start.
     //
-    if(!(pDeviceContext->BulkWritePipe)) {
+    if(!(pDeviceContext->BulkWritePipe
+	        && pDeviceContext->BulkReadPipe)) {
         status = STATUS_INVALID_DEVICE_STATE;
         TraceEvents(TRACE_LEVEL_ERROR, DBG_PNP,
                             "Device is not configured properly %!STATUS!\n",

@@ -131,6 +131,7 @@ exit:
 
 static int _Test_rebound = 0;
 
+static char _Test_loopback[100] = "loopbackbuffer";
 
 static VOID
 IoEvtBulkOutUrb(
@@ -145,6 +146,7 @@ IoEvtBulkOutUrb(
     NTSTATUS status = STATUS_SUCCESS;
     PUCHAR transferBuffer;
     ULONG transferBufferLength = 0;
+	ULONG usedBuffer = 0;
 
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
@@ -167,10 +169,12 @@ IoEvtBulkOutUrb(
         goto exit;
     }
 
-    LogError(TRACE_DEVICE, "Successfully received %d bytes from device %p",
+    LogInfo(TRACE_DEVICE, "Successfully received %d bytes from device %p",
         transferBufferLength, pEpQContext->usbDeviceObj );
     // dump to trace
-
+    usedBuffer = MINLEN( sizeof(_Test_loopback)/sizeof(_Test_loopback[0]) , transferBufferLength );
+    memcpy( _Test_loopback, transferBuffer, usedBuffer );
+	_Test_loopback[ sizeof(_Test_loopback)/sizeof(_Test_loopback[0]) - 1 ] = 0;
 
 exit:
     // writes never pended, always completed
@@ -183,6 +187,61 @@ exit:
 
 
 
+static VOID
+IoEvtBulkInUrb(
+    _In_ WDFQUEUE Queue,
+    _In_ WDFREQUEST Request,
+    _In_ size_t OutputBufferLength,
+    _In_ size_t InputBufferLength,
+    _In_ ULONG IoControlCode
+)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    PENDPOINTQUEUE_CONTEXT pEpQContext;
+    PUCHAR transferBuffer;
+    ULONG transferBufferLength;
+    SIZE_T completeBytes = 0;
+
+    UNREFERENCED_PARAMETER(OutputBufferLength);
+    UNREFERENCED_PARAMETER(InputBufferLength);
+
+    pEpQContext = GetEndpointQueueContext(Queue);
+
+    if (IoControlCode != IOCTL_INTERNAL_USB_SUBMIT_URB)
+    {
+        LogError(TRACE_DEVICE, "WdfRequest BIN %p Incorrect IOCTL %x, %!STATUS!",
+            Request, IoControlCode, status);
+        status = STATUS_INVALID_PARAMETER;
+        goto exit;
+    }
+
+    status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
+    if (!NT_SUCCESS(status))
+    {
+        LogError(TRACE_DEVICE, "WdfRequest BIN %p unable to retrieve buffer %!STATUS!",
+            Request, status);
+        goto exit;
+    }
+
+    if( transferBufferLength > 0 )
+	{
+        completeBytes = strlen( _Test_loopback );
+		memcpy( transferBuffer, _Test_loopback, MINLEN( completeBytes+1, transferBufferLength) );
+		transferBuffer[ transferBufferLength - 1 ] = 0;
+		completeBytes = strlen( (const char *)transferBuffer ) + 1;
+	    LogInfo(TRACE_DEVICE, "Successfully echoed string of  %d bytes",
+	        (ULONG)completeBytes );
+	} else {
+	    LogError(TRACE_DEVICE, "ERROR: Empty read buffer!");
+	}
+
+
+
+exit:
+    UdecxUrbSetBytesCompleted(Request, (ULONG)completeBytes);
+    UdecxUrbCompleteWithNtStatus(Request, status);
+    return;
+}
 
 NTSTATUS
 Io_DeviceSlept(
@@ -236,6 +295,11 @@ Io_RetrieveEpQueue(
     case g_BulkOutEndpointAddress:
         pQueueRecord = &(pIoContext->BulkOutQueue);
         pIoCallback = IoEvtBulkOutUrb;
+        break;
+
+    case g_BulkInEndpointAddress:
+        pQueueRecord = &(pIoContext->BulkInQueue);
+        pIoCallback = IoEvtBulkInUrb;
         break;
 
     default:
@@ -305,6 +369,8 @@ Io_FreeEndpointQueues(
     WdfIoQueuePurgeSynchronously(pIoContext->ControlQueue);
     WdfObjectDelete(pIoContext->ControlQueue);
 
+    WdfIoQueuePurgeSynchronously(pIoContext->BulkInQueue);
+    WdfObjectDelete(pIoContext->BulkInQueue);
     WdfIoQueuePurgeSynchronously(pIoContext->BulkOutQueue);
     WdfObjectDelete(pIoContext->BulkOutQueue);
 
