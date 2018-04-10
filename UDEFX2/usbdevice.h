@@ -31,6 +31,7 @@ typedef struct _USB_CONTEXT {
     UDECXUSBENDPOINT      UDEFX2ControlEndpoint;
 	UDECXUSBENDPOINT      UDEFX2BulkOutEndpoint;
     UDECXUSBENDPOINT      UDEFX2BulkInEndpoint;
+    UDECXUSBENDPOINT      UDEFX2InterruptInEndpoint;
     BOOLEAN               IsAwake;
 } USB_CONTEXT, *PUSB_CONTEXT;
 
@@ -50,6 +51,7 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(USB_CONTEXT, GetUsbDeviceContext);
 #define g_ProductIndex        2
 #define g_BulkOutEndpointAddress 2
 #define g_BulkInEndpointAddress    0x84
+#define g_InterruptEndpointAddress 0x86
 
 
 #define UDEFX2_DEVICE_VENDOR_ID  0x9, 0x12 // little endian

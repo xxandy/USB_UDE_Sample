@@ -25,8 +25,15 @@ DEFINE_GUID(GUID_DEVINTERFACE_UDE_BACKCHANNEL,
 
 
 
+typedef ULONG DEVICE_INTR_FLAGS;
+typedef DEVICE_INTR_FLAGS* PDEVICE_INTR_FLAGS;
+
 
 
 #define IOCTL_INDEX_UDEFX2C   0x900
 #define FILE_DEVICE_UDEFX2C   65600U
 
+#define IOCTL_UDEFX2_GENERATE_INTERRUPT  CTL_CODE(FILE_DEVICE_UDEFX2C,     \
+                                                  IOCTL_INDEX_UDEFX2C + 5,     \
+                                                  METHOD_BUFFERED,         \
+                                                  FILE_READ_ACCESS)

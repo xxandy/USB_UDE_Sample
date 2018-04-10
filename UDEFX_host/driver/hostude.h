@@ -45,6 +45,21 @@ Environment:
 #define TEST_BOARD_TRANSFER_BUFFER_SIZE (64*1024)
 
 
+
+//
+// Data that the device reports via interrupts
+//
+
+// if we decide to queue incoming updates, this will be a limit
+#define MAX_CACHED_INTR_UPDATES 100
+
+typedef struct _DEVICE_INTR_STATE {
+    DEVICE_INTR_FLAGS latestStatus;
+    ULONG             numUnreadUpdates;
+    WDFSPINLOCK       sync;
+} DEVICE_INTR_STATE, *PDEVICE_INTR_STATE;
+
+
 //
 // A structure representing the instance information associated with
 // this particular device.
@@ -60,7 +75,13 @@ typedef struct _DEVICE_CONTEXT {
 
     WDFUSBPIPE                      BulkWritePipe;
 
+    WDFUSBPIPE                      InterruptPipe;
+
     WDFWAITLOCK                     ResetDeviceWaitLock;
+
+    WDFQUEUE                        InterruptMsgQueue;
+
+    DEVICE_INTR_STATE               InterruptStatus;
 
     ULONG                           UsbDeviceTraits;
 
@@ -129,11 +150,36 @@ SelectInterfaces(
     _In_ WDFDEVICE Device
     );
 
+
+VOID
+OsrCompleteInterruptRequest(
+    _In_ WDFREQUEST request,
+    _In_ NTSTATUS  ReaderStatus,
+    _In_ DEVICE_INTR_FLAGS NewDeviceFlags
+    );
+
+VOID
+OsrUsbIoctlGetInterruptMessage(
+    _In_ WDFDEVICE Device,
+    _In_ NTSTATUS ReaderStatus,
+    _In_ DEVICE_INTR_FLAGS NewDeviceFlags
+    );
+
 _IRQL_requires_(PASSIVE_LEVEL)
 NTSTATUS
 OsrFxSetPowerPolicy(
         _In_ WDFDEVICE Device
     );
+
+_IRQL_requires_(PASSIVE_LEVEL)
+NTSTATUS
+OsrFxConfigContReaderForInterruptEndPoint(
+    _In_ PDEVICE_CONTEXT DeviceContext
+    );
+
+EVT_WDF_USB_READER_COMPLETION_ROUTINE OsrFxEvtUsbInterruptPipeReadComplete;
+
+EVT_WDF_USB_READERS_FAILED OsrFxEvtUsbInterruptReadersFailed;
 
 EVT_WDF_IO_QUEUE_IO_STOP OsrFxEvtIoStop;
 

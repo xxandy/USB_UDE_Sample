@@ -18,6 +18,7 @@ Environment:
 #include "usbdevice.h"
 #include "Misc.h"
 #include "USBCom.h"
+#include "BackChannel.h"
 
 #include <ntstrsafe.h>
 #include "device.tmh"
@@ -177,6 +178,13 @@ Return Value:
 	// Initialize controller data members.
 
 	pControllerContext = GetUsbControllerContext(wdfDevice);
+
+    status = BackChannelInit(wdfDevice);
+    if (!NT_SUCCESS(status))
+    {
+        LogError(TRACE_DEVICE, "Unable to initialize backchannel err=%!STATUS!", status);
+        goto exit;
+    }
 
 
 	KeInitializeEvent(&pControllerContext->ResetCompleteEvent,
@@ -506,6 +514,8 @@ ControllerWdfEvtCleanupCallback(
 
 	Usb_Destroy((WDFDEVICE)WdfDevice);
 
+    BackChannelDestroy((WDFDEVICE)WdfDevice);
+
 	FuncExit(TRACE_DEVICE, 0);
 }
 
@@ -534,6 +544,13 @@ ControllerEvtIoDeviceControl(
 	if (handled) {
 		goto exit;
 	}
+
+    handled = BackChannelIoctl(IoControlCode, ctrdevice, Request);
+
+
+    if (handled) {
+        goto exit;
+    }
 
 
 	status = STATUS_INVALID_DEVICE_REQUEST;

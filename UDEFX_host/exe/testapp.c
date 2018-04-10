@@ -70,9 +70,12 @@ while(__pragma(warning(disable:4127)) a __pragma(warning(disable:4127)))
 BOOL G_fDumpUsbConfig = FALSE;    // flags set in response to console command line switches
 BOOL G_fRead = FALSE;
 BOOL G_fWrite = FALSE;
+BOOL G_fGetDeviceInterrupt = FALSE;
+BOOL G_fGenerateVirtualDeviceIntr = FALSE;
 char *G_WriteText = "DefaultWrite";
 
 
+DEVICE_INTR_FLAGS G_IntrValue = 0;
 
 BOOL
 DumpUsbConfig( // defined in dump.c
@@ -240,7 +243,9 @@ Return Value:
     printf("-w [text] where n is number of bytes to write\n");
 
 
+    printf("-i [n] where n is an hex number to send as INTERRUPT/IN from virtual device\n");
     printf("-v verbose -- dumps read data\n");
+    printf("-p receive device interrupt\n");
     printf("-u to dump USB configuration and pipe info \n");
 
     return;
@@ -298,6 +303,23 @@ Return Value:
             case 'U':
                 G_fDumpUsbConfig = TRUE;
                 break;
+            case 'p':
+            case 'P':
+                G_fGetDeviceInterrupt = TRUE;
+                break;
+
+            case 'i':
+            case 'I':
+                if (i + 1 >= argc) {
+                    Usage();
+                    exit(1);
+                } else {
+                    G_IntrValue = strtol( argv[i + 1], NULL, 16 );
+                }
+                i++;
+                G_fGenerateVirtualDeviceIntr = TRUE;
+                break;
+
 
             default:
                 Usage();
@@ -377,6 +399,110 @@ ReadTextFrom(LPCGUID guid)
     return TRUE;
 }
 
+
+
+
+
+BOOL
+GenerateDeviceInterrupt(DEVICE_INTR_FLAGS value)
+{
+    HANDLE          deviceHandle;
+    DWORD           code;
+    ULONG           index = 0;
+    DEVICE_INTR_FLAGS  flagsState = 0;
+
+    printf("About to open device\n"); fflush(stdout);
+
+    deviceHandle = OpenDevice((LPGUID)&GUID_DEVINTERFACE_UDE_BACKCHANNEL);
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find virtual controller device!\n"); fflush(stdout);
+
+        return FALSE;
+
+    }
+
+    printf("Device open, will generate interrupt...\n"); fflush(stdout);
+
+    if (!DeviceIoControl(deviceHandle,
+        IOCTL_UDEFX2_GENERATE_INTERRUPT,
+        &value,                // Ptr to InBuffer
+        sizeof(value),         // Length of InBuffer
+        NULL,                  // Ptr to OutBuffer
+        0,                     // Length of OutBuffer
+        &index,                // BytesReturned
+        0)) {                  // Ptr to Overlapped structure
+
+        code = GetLastError();
+
+        printf("DeviceIoControl failed with error 0x%x\n", code);
+
+    }
+    else
+    {
+        printf("DeviceIoControl SUCCESS , returned 0x%x, bytes=%d\n", flagsState, index);
+    }
+
+    CloseHandle(deviceHandle);
+    return TRUE;
+}
+
+
+
+
+
+BOOL
+GetDeviceInterrupt()
+{
+    HANDLE          deviceHandle;
+    DWORD           code;
+    ULONG           index = 0;
+    DEVICE_INTR_FLAGS  flagsState = 0;
+
+    printf("About to open device\n"); fflush(stdout);
+
+    deviceHandle = OpenDevice((LPGUID)&GUID_DEVINTERFACE_HOSTUDE );
+
+    if (deviceHandle == INVALID_HANDLE_VALUE) {
+
+        printf("Unable to find any OSR FX2 devices!\n"); fflush(stdout);
+
+        return FALSE;
+
+    }
+
+    printf("Device open, waiting for interrupt...\n"); fflush(stdout);
+
+    if (!DeviceIoControl(deviceHandle,
+                            IOCTL_OSRUSBFX2_GET_INTERRUPT_MESSAGE,
+                            NULL,                  // Ptr to InBuffer
+                            0,                     // Length of InBuffer
+                            &flagsState,           // Ptr to OutBuffer
+                            sizeof(flagsState),    // Length of OutBuffer
+                            &index,                // BytesReturned
+                            0)) {                  // Ptr to Overlapped structure
+
+        code = GetLastError();
+
+        printf("DeviceIoControl failed with error 0x%x\n", code);
+
+    }
+    else
+    {
+        printf("DeviceIoControl SUCCESS , returned 0x%x, bytes=%d\n", flagsState, index);
+    }
+
+    CloseHandle(deviceHandle);
+    return TRUE;
+}
+
+
+
+
+
+
+
 int
 _cdecl
 main(
@@ -410,13 +536,22 @@ Return Value:
     if (G_fDumpUsbConfig) {
         DumpUsbConfig();
     }
+    else if (G_fGetDeviceInterrupt) {
+        printf("About to get device interrupt\n"); fflush(stdout);
+        GetDeviceInterrupt();
+    }
+    else if (G_fGenerateVirtualDeviceIntr) {
+        printf("About to generate device interrupt\n"); fflush(stdout);
+        GenerateDeviceInterrupt(G_IntrValue);
+    }
     else if (G_fWrite) {
-        LPCGUID dguid = &GUID_DEVINTERFACE_HOSTUDE;
+        LPCGUID dguid =  &GUID_DEVINTERFACE_HOSTUDE;
         printf("About to write %s\n", G_WriteText); fflush(stdout);
         WriteTextTo(dguid, G_WriteText);
-    } else if (G_fRead) {
+    }
+    else if (G_fRead) {
         LPCGUID dguid = &GUID_DEVINTERFACE_HOSTUDE;
-        printf("About to read\n"); fflush(stdout);
+        printf("About to reads\n"); fflush(stdout);
         ReadTextFrom(dguid);
     } else  {
         retValue = 1;

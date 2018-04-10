@@ -42,6 +42,10 @@ DEFINE_GUID(GUID_DEVINTERFACE_HOSTUDE,
 #pragma warning(pop)
 
 
+typedef ULONG DEVICE_INTR_FLAGS;
+typedef DEVICE_INTR_FLAGS* PDEVICE_INTR_FLAGS;
+
+
 
 #define IOCTL_INDEX             0x800
 #define FILE_DEVICE_OSRUSBFX2   65500U
@@ -55,6 +59,13 @@ DEFINE_GUID(GUID_DEVINTERFACE_HOSTUDE,
                                                      IOCTL_INDEX + 1, \
                                                      METHOD_BUFFERED,         \
                                                      FILE_WRITE_ACCESS)
+
+#define IOCTL_OSRUSBFX2_GET_INTERRUPT_MESSAGE CTL_CODE(FILE_DEVICE_OSRUSBFX2,\
+                                                    IOCTL_INDEX + 9, \
+                                                    METHOD_OUT_DIRECT, \
+                                                    FILE_READ_ACCESS)
+
+
 
 
 
