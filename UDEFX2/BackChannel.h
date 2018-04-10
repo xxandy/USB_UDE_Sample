@@ -51,8 +51,5 @@ BackChannelIoctl(
 
 
 
-EVT_WDF_IO_QUEUE_IO_READ                        BackChannelEvtRead;
-EVT_WDF_IO_QUEUE_IO_WRITE                       BackChannelEvtWrite;
-
 EXTERN_C_END
 

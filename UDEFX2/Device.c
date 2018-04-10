@@ -197,8 +197,6 @@ Return Value:
 	//
 	WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&defaultQueueConfig, WdfIoQueueDispatchSequential);
 	defaultQueueConfig.EvtIoDeviceControl = ControllerEvtIoDeviceControl;
-    defaultQueueConfig.EvtIoRead = BackChannelEvtRead;
-    defaultQueueConfig.EvtIoWrite = BackChannelEvtWrite;
     defaultQueueConfig.PowerManaged = WdfFalse;
 
 	status = WdfIoQueueCreate(wdfDevice,

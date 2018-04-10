@@ -133,6 +133,7 @@ exit:
 
 static int _Test_rebound = 0;
 
+static char _Test_loopback[100] = "loopbackbuffer";
 
 static VOID
 IoEvtBulkOutUrb(
@@ -143,21 +144,16 @@ IoEvtBulkOutUrb(
     _In_ ULONG IoControlCode
 )
 {
-    WDFREQUEST matchingRead;
-    WDFDEVICE backchannel;
-    PUDECX_BACKCHANNEL_CONTEXT pBackChannelContext;
     PENDPOINTQUEUE_CONTEXT pEpQContext;
     NTSTATUS status = STATUS_SUCCESS;
     PUCHAR transferBuffer;
     ULONG transferBufferLength = 0;
-    SIZE_T completeBytes = 0;
+    ULONG usedBuffer = 0;
 
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
 
     pEpQContext = GetEndpointQueueContext(Queue);
-    backchannel = pEpQContext->backChannelDevice;
-    pBackChannelContext = GetBackChannelContext(backchannel);
 
     if (IoControlCode != IOCTL_INTERNAL_USB_SUBMIT_URB)
     {
@@ -175,39 +171,12 @@ IoEvtBulkOutUrb(
         goto exit;
     }
 
-    // try to get us information about a request that may be waiting for this info
-    status = WRQueuePushWrite(
-        &(pBackChannelContext->missionRequest),
-        transferBuffer,
-        transferBufferLength,
-        &matchingRead);
-
-    if (matchingRead != NULL)
-    {
-        PVOID rbuffer;
-        SIZE_T rlen;
-
-        // this is a back-channel read, not a USB read!
-        status = WdfRequestRetrieveOutputBuffer(matchingRead, 1, &rbuffer, &rlen);
-
-        if (!NT_SUCCESS(status))  {
-
-            LogError(TRACE_DEVICE, "WdfRequest %p cannot retrieve mission completion buffer %!STATUS!",
-                matchingRead, status);
-
-        } else  {
-            completeBytes = MINLEN(rlen, transferBufferLength);
-            memcpy(rbuffer, transferBuffer, completeBytes);
-        }
-
-        WdfRequestCompleteWithInformation(matchingRead, status, completeBytes);
-
-        LogInfo(TRACE_DEVICE, "Mission request %p completed with matching read %p", Request, matchingRead);
-    } else {
-        LogInfo(TRACE_DEVICE, "Mission request %p enqueued", Request);
-    }
-
-
+    LogInfo(TRACE_DEVICE, "Successfully received %d bytes from device %p",
+        transferBufferLength, pEpQContext->usbDeviceObj);
+    // dump to trace
+    usedBuffer = MINLEN(sizeof(_Test_loopback) / sizeof(_Test_loopback[0]), transferBufferLength);
+    memcpy(_Test_loopback, transferBuffer, usedBuffer);
+    _Test_loopback[sizeof(_Test_loopback) / sizeof(_Test_loopback[0]) - 1] = 0;
 
 exit:
     // writes never pended, always completed
@@ -230,10 +199,7 @@ IoEvtBulkInUrb(
 )
 {
     NTSTATUS status = STATUS_SUCCESS;
-    WDFDEVICE backchannel;
-    PUDECX_BACKCHANNEL_CONTEXT pBackChannelContext;
     PENDPOINTQUEUE_CONTEXT pEpQContext;
-    BOOLEAN bReady = FALSE;
     PUCHAR transferBuffer;
     ULONG transferBufferLength;
     SIZE_T completeBytes = 0;
@@ -242,8 +208,6 @@ IoEvtBulkInUrb(
     UNREFERENCED_PARAMETER(InputBufferLength);
 
     pEpQContext = GetEndpointQueueContext(Queue);
-    backchannel = pEpQContext->backChannelDevice;
-    pBackChannelContext = GetBackChannelContext(backchannel);
 
     if (IoControlCode != IOCTL_INTERNAL_USB_SUBMIT_URB)
     {
@@ -261,26 +225,24 @@ IoEvtBulkInUrb(
         goto exit;
     }
 
-    // try to get us information about a request that may be waiting for this info
-    status = WRQueuePullRead(
-        &(pBackChannelContext->missionCompletion),
-        Request,
-        transferBuffer,
-        transferBufferLength,
-        &bReady,
-        &completeBytes);
-
-    if (bReady)
+    if (transferBufferLength > 0)
     {
-        UdecxUrbSetBytesCompleted(Request, (ULONG)completeBytes);
-        UdecxUrbCompleteWithNtStatus(Request, status);
-        LogInfo(TRACE_DEVICE, "Mission response %p completed with pre-existing data", Request);
-    } else {
-        LogInfo(TRACE_DEVICE, "Mission response %p pended", Request);
+        completeBytes = strlen(_Test_loopback);
+        memcpy(transferBuffer, _Test_loopback, MINLEN(completeBytes + 1, transferBufferLength));
+        transferBuffer[transferBufferLength - 1] = 0;
+        completeBytes = strlen((const char *)transferBuffer) + 1;
+        LogInfo(TRACE_DEVICE, "Successfully echoed string of  %d bytes",
+            (ULONG)completeBytes);
+    }
+    else {
+        LogError(TRACE_DEVICE, "ERROR: Empty read buffer!");
     }
 
 
+
 exit:
+    UdecxUrbSetBytesCompleted(Request, (ULONG)completeBytes);
+    UdecxUrbCompleteWithNtStatus(Request, status);
     return;
 }
 
