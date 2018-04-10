@@ -545,13 +545,12 @@ Return Value:
         GenerateDeviceInterrupt(G_IntrValue);
     }
     else if (G_fWrite) {
-        LPCGUID dguid =  &GUID_DEVINTERFACE_HOSTUDE;
+        LPCGUID dguid = &GUID_DEVINTERFACE_HOSTUDE;
         printf("About to write %s\n", G_WriteText); fflush(stdout);
         WriteTextTo(dguid, G_WriteText);
-    }
-    else if (G_fRead) {
+    } else if (G_fRead) {
         LPCGUID dguid = &GUID_DEVINTERFACE_HOSTUDE;
-        printf("About to reads\n"); fflush(stdout);
+        printf("About to read\n"); fflush(stdout);
         ReadTextFrom(dguid);
     } else  {
         retValue = 1;
