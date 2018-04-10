@@ -148,7 +148,7 @@ IoEvtBulkOutUrb(
     NTSTATUS status = STATUS_SUCCESS;
     PUCHAR transferBuffer;
     ULONG transferBufferLength = 0;
-    ULONG usedBuffer = 0;
+	ULONG usedBuffer = 0;
 
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
@@ -172,11 +172,11 @@ IoEvtBulkOutUrb(
     }
 
     LogInfo(TRACE_DEVICE, "Successfully received %d bytes from device %p",
-        transferBufferLength, pEpQContext->usbDeviceObj);
+        transferBufferLength, pEpQContext->usbDeviceObj );
     // dump to trace
-    usedBuffer = MINLEN(sizeof(_Test_loopback) / sizeof(_Test_loopback[0]), transferBufferLength);
-    memcpy(_Test_loopback, transferBuffer, usedBuffer);
-    _Test_loopback[sizeof(_Test_loopback) / sizeof(_Test_loopback[0]) - 1] = 0;
+    usedBuffer = MINLEN( sizeof(_Test_loopback)/sizeof(_Test_loopback[0]) , transferBufferLength );
+    memcpy( _Test_loopback, transferBuffer, usedBuffer );
+	_Test_loopback[ sizeof(_Test_loopback)/sizeof(_Test_loopback[0]) - 1 ] = 0;
 
 exit:
     // writes never pended, always completed
@@ -225,18 +225,17 @@ IoEvtBulkInUrb(
         goto exit;
     }
 
-    if (transferBufferLength > 0)
-    {
-        completeBytes = strlen(_Test_loopback);
-        memcpy(transferBuffer, _Test_loopback, MINLEN(completeBytes + 1, transferBufferLength));
-        transferBuffer[transferBufferLength - 1] = 0;
-        completeBytes = strlen((const char *)transferBuffer) + 1;
-        LogInfo(TRACE_DEVICE, "Successfully echoed string of  %d bytes",
-            (ULONG)completeBytes);
-    }
-    else {
-        LogError(TRACE_DEVICE, "ERROR: Empty read buffer!");
-    }
+    if( transferBufferLength > 0 )
+	{
+        completeBytes = strlen( _Test_loopback );
+		memcpy( transferBuffer, _Test_loopback, MINLEN( completeBytes+1, transferBufferLength) );
+		transferBuffer[ transferBufferLength - 1 ] = 0;
+		completeBytes = strlen( (const char *)transferBuffer ) + 1;
+	    LogInfo(TRACE_DEVICE, "Successfully echoed string of  %d bytes",
+	        (ULONG)completeBytes );
+	} else {
+	    LogError(TRACE_DEVICE, "ERROR: Empty read buffer!");
+	}
 
 
 
@@ -613,7 +612,6 @@ Io_FreeEndpointQueues(
 
     WdfIoQueuePurgeSynchronously(pIoContext->BulkInQueue);
     WdfObjectDelete(pIoContext->BulkInQueue);
-
     WdfIoQueuePurgeSynchronously(pIoContext->BulkOutQueue);
     WdfObjectDelete(pIoContext->BulkOutQueue);
 
