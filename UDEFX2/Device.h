@@ -42,8 +42,6 @@ typedef struct _UDECX_USBCONTROLLER_CONTEXT {
     KEVENT ResetCompleteEvent;
     BOOLEAN AllowOnlyResetInterrupts;
     WDFQUEUE DefaultQueue;
-    WRITE_BUFFER_TO_READ_REQUEST_QUEUE missionRequest;
-    WRITE_BUFFER_TO_READ_REQUEST_QUEUE missionCompletion;
 
     PUDECXUSBDEVICE_INIT  ChildDeviceInit;
     UDECXUSBDEVICE        ChildDevice;
