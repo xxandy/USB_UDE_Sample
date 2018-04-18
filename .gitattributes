@@ -1,0 +1,14 @@
+
+*.sh text eol=lf
+*.bat text eol=crlf
+
+rpi/source/simplegadget/*.c text eol=lf
+rpi/source/simplegadget/*.h text eol=lf
+rpi/source/simplegadget/Makefile text eol=lf
+
+
+rpi/source/simpleufn/*.c text eol=lf
+rpi/source/simpleufn/*.h text eol=lf
+rpi/source/simpleufn/inc/*.h text eol=lf
+rpi/source/simpleufn/Makefile text eol=lf
+
