@@ -16,11 +16,9 @@ switch to working on a RaspBerry Pi Zero.
 
 This folder contains:
 
-scrips_for_pi: scripts you run on the Raspberry Pi for configuration, utility, etc.
-
-source:  cross-compiled drivers on Ubuntu you can install on the Pi
-
-scripts_for_ubuntu:  scripts run an Ubuntu 32-bit box where the cross-compiler and kernel is installed.
+* scrips_for_pi: scripts you run on the Raspberry Pi for configuration, utility, etc.
+* source:  cross-compiled drivers on Ubuntu you can install on the Pi
+* scripts_for_ubuntu:  scripts run an Ubuntu 32-bit box where the cross-compiler and kernel is installed.
 
 
 Building the kernel:
