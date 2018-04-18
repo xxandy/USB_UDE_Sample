@@ -1,35 +1,21 @@
 /*
- * zero.c -- Gadget Zero, for USB development
+ * one.c -- Gadget One, for USB development
  *
- * Copyright (C) 2003-2008 David Brownell
- * Copyright (C) 2008 by Nokia Corporation
+ * Copyright (C) 2017 by Microsoft corporation
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
  */
 
 /*
- * Gadget Zero only needs two bulk endpoints, and is an example of how you
- * can write a hardware-agnostic gadget driver running inside a USB device.
- * Some hardware details are visible, but don't affect most of the driver.
+ * Gadget one is an exploration into Gadget development for Linux
+ * Using the Gadget APIS. 
+ * 
+ * It expands (contracts?) from Gadget zero, but removes the multi-function
+ * aspect of it, so that the driver can be a simpler starting point
+ * for developing other drivers.
  *
- * Use it with the Linux host/master side "usbtest" driver to get a basic
- * functional test of your device-side usb stack, or with "usb-skeleton".
- *
- * It supports two similar configurations.  One sinks whatever the usb host
- * writes, and in return sources zeroes.  The other loops whatever the host
- * writes back, so the host can read it.
- *
- * Many drivers will only have one configuration, letting them be much
- * simpler if they also don't support high speed operation (like this
- * driver does).
- *
- * Why is *this* driver using two configurations, rather than setting up
- * two interfaces with different functions?  To help verify that multiple
- * configuration infrastructure is working correctly; also, so that it can
- * work with low capability USB controllers without four bulk endpoints.
+ * Use it with the Windows Host-side UDETEst from https://github.com/xxandy/USB_UDE_Sample,
+ * picking the eduref_BULKOUT_plus_BULKIN branch, which does not have interruptes,
+ * and changing the hardware ID's on the INF file to match this device.
  */
 
 /*
@@ -46,7 +32,10 @@
 #include <linux/err.h>
 #include <linux/usb/composite.h>
 
-#include "g_zero.h"
+#include "g_one.h" // my stuff 
+
+#include "f_one.h" // interface exposed by a function I need
+
 /*-------------------------------------------------------------------------*/
 USB_GADGET_COMPOSITE_OPTIONS();
 
@@ -54,22 +43,10 @@ USB_GADGET_COMPOSITE_OPTIONS();
 
 static const char longname[] = "Gadget Zero";
 
-/*
- * Normally the "loopback" configuration is second (index 1) so
- * it's not the default.  Here's where to change that order, to
- * work better with hosts where config changes are problematic or
- * controllers (like original superh) that only support one config.
- */
-static bool loopdefault = true;
-module_param(loopdefault, bool, S_IRUGO|S_IWUSR);
 
 static struct usb_zero_options gzero_options = {
-	.isoc_interval = GZERO_ISOC_INTERVAL,
-	.isoc_maxpacket = GZERO_ISOC_MAXPACKET,
 	.bulk_buflen = GZERO_BULK_BUFLEN,
 	.qlen = GZERO_QLEN,
-	.ss_bulk_qlen = GZERO_SS_BULK_QLEN,
-	.ss_iso_qlen = GZERO_SS_ISO_QLEN,
 };
 
 /*-------------------------------------------------------------------------*/
@@ -121,7 +98,7 @@ static const struct usb_descriptor_header *otg_desc[2];
 
 /* string IDs are assigned dynamically */
 /* default serial number takes at least two packets */
-static char serial[] = "0123456789.0123456789.0123456789";
+static char serial[] = "0123456789.0123456789.0100020000";
 
 #define USB_GZERO_SS_DESC	(USB_GADGET_FIRST_AVAIL_IDX + 0)
 #define USB_GZERO_LB_DESC	(USB_GADGET_FIRST_AVAIL_IDX + 1)
@@ -196,72 +173,47 @@ static void zero_resume(struct usb_composite_dev *cdev)
 
 /*-------------------------------------------------------------------------*/
 
-static struct usb_configuration loopback_driver = {
-	.label          = "loopback",
-	.bConfigurationValue = 2,
-	.bmAttributes   = USB_CONFIG_ATT_SELFPOWER,
-	/* .iConfiguration = DYNAMIC */
-};
+static struct usb_function *func_lb;
+static struct usb_function_instance *func_inst_lb;
 
-static struct usb_function *func_ss;
-static struct usb_function_instance *func_inst_ss;
 
-static int ss_config_setup(struct usb_configuration *c,
+static int lb_config_setup(struct usb_configuration *c,
 		const struct usb_ctrlrequest *ctrl)
 {
 	switch (ctrl->bRequest) {
 	case 0x5b:
 	case 0x5c:
-		return func_ss->setup(func_ss, ctrl);
+		return func_lb->setup(func_lb, ctrl);  // TODO: do we really need this?
 	default:
 		return -EOPNOTSUPP;
 	}
 }
 
-static struct usb_configuration sourcesink_driver = {
-	.label                  = "source/sink",
-	.setup                  = ss_config_setup,
-	.bConfigurationValue    = 3,
-	.bmAttributes           = USB_CONFIG_ATT_SELFPOWER,
-	/* .iConfiguration      = DYNAMIC */
+
+static struct usb_configuration loopback_driver = {
+	.label          = "loopback",
+	.setup                  = lb_config_setup,
+	.bConfigurationValue = 2,
+	.bmAttributes   = USB_CONFIG_ATT_SELFPOWER,
+	/* .iConfiguration = DYNAMIC */
 };
 
+
+
 module_param_named(buflen, gzero_options.bulk_buflen, uint, 0);
-module_param_named(pattern, gzero_options.pattern, uint, S_IRUGO|S_IWUSR);
-MODULE_PARM_DESC(pattern, "0 = all zeroes, 1 = mod63, 2 = none");
 
-module_param_named(isoc_interval, gzero_options.isoc_interval, uint,
-		S_IRUGO|S_IWUSR);
-MODULE_PARM_DESC(isoc_interval, "1 - 16");
 
-module_param_named(isoc_maxpacket, gzero_options.isoc_maxpacket, uint,
-		S_IRUGO|S_IWUSR);
-MODULE_PARM_DESC(isoc_maxpacket, "0 - 1023 (fs), 0 - 1024 (hs/ss)");
 
-module_param_named(isoc_mult, gzero_options.isoc_mult, uint, S_IRUGO|S_IWUSR);
-MODULE_PARM_DESC(isoc_mult, "0 - 2 (hs/ss only)");
 
-module_param_named(isoc_maxburst, gzero_options.isoc_maxburst, uint,
-		S_IRUGO|S_IWUSR);
-MODULE_PARM_DESC(isoc_maxburst, "0 - 15 (ss only)");
 
-static struct usb_function *func_lb;
-static struct usb_function_instance *func_inst_lb;
 
 module_param_named(qlen, gzero_options.qlen, uint, S_IRUGO|S_IWUSR);
 MODULE_PARM_DESC(qlen, "depth of loopback queue");
 
-module_param_named(ss_bulk_qlen, gzero_options.ss_bulk_qlen, uint,
-		S_IRUGO|S_IWUSR);
-MODULE_PARM_DESC(bulk_qlen, "depth of sourcesink queue for bulk transfer");
 
-module_param_named(ss_iso_qlen, gzero_options.ss_iso_qlen, uint,
-		S_IRUGO|S_IWUSR);
-MODULE_PARM_DESC(iso_qlen, "depth of sourcesink queue for iso transfer");
 
 static int zero_bind(struct usb_composite_dev *cdev)
 {
-	struct f_ss_opts	*ss_opts;
 	struct f_lb_opts	*lb_opts;
 	int			status;
 
@@ -282,38 +234,18 @@ static int zero_bind(struct usb_composite_dev *cdev)
 
 	setup_timer(&autoresume_timer, zero_autoresume, (unsigned long) cdev);
 
-	func_inst_ss = usb_get_function_instance("HorseSink");
-	if (IS_ERR(func_inst_ss))
-		return PTR_ERR(func_inst_ss);
 
-	printk("Zerobind got sourcesink\n");
 
-	ss_opts =  container_of(func_inst_ss, struct f_ss_opts, func_inst);
-	ss_opts->pattern = gzero_options.pattern;
-	ss_opts->isoc_interval = gzero_options.isoc_interval;
-	ss_opts->isoc_maxpacket = gzero_options.isoc_maxpacket;
-	ss_opts->isoc_mult = gzero_options.isoc_mult;
-	ss_opts->isoc_maxburst = gzero_options.isoc_maxburst;
-	ss_opts->bulk_buflen = gzero_options.bulk_buflen;
-	ss_opts->bulk_qlen = gzero_options.ss_bulk_qlen;
-	ss_opts->iso_qlen = gzero_options.ss_iso_qlen;
 
-	func_ss = usb_get_function(func_inst_ss);
-	if (IS_ERR(func_ss)) {
-		status = PTR_ERR(func_ss);
-		goto err_put_func_inst_ss;
-	}
 
-	printk("Zerobind translated sourcesink\n");
 
-	func_inst_lb = usb_get_function_instance("Hunchback");
+	func_inst_lb = usb_get_function_instance("OTLoopBck");
 	if (IS_ERR(func_inst_lb)) {
-                printk("unable to load function\n");
-		status = PTR_ERR(func_inst_lb);
-		goto err_put_func_ss;
+        printk("unable to load function\n");
+		return PTR_ERR(func_inst_lb); // nothing to undo in this case
 	}
 
-	printk("Zerobind got hunchback\n");
+	printk("Zerobind got OTLoopBck\n");
 
 	lb_opts = container_of(func_inst_lb, struct f_lb_opts, func_inst);
 	lb_opts->bulk_buflen = gzero_options.bulk_buflen;
@@ -325,18 +257,14 @@ static int zero_bind(struct usb_composite_dev *cdev)
 		goto err_put_func_inst_lb;
 	}
 
-	printk("Zerobind translated hunchback\n");
+	printk("Zerobind translated OTLoopBck\n");
 
-	sourcesink_driver.iConfiguration = strings_dev[USB_GZERO_SS_DESC].id;
 	loopback_driver.iConfiguration = strings_dev[USB_GZERO_LB_DESC].id;
 
 	/* support autoresume for remote wakeup testing */
-	sourcesink_driver.bmAttributes &= ~USB_CONFIG_ATT_WAKEUP;
 	loopback_driver.bmAttributes &= ~USB_CONFIG_ATT_WAKEUP;
-	sourcesink_driver.descriptors = NULL;
 	loopback_driver.descriptors = NULL;
 	if (autoresume) {
-		sourcesink_driver.bmAttributes |= USB_CONFIG_ATT_WAKEUP;
 		loopback_driver.bmAttributes |= USB_CONFIG_ATT_WAKEUP;
 		autoresume_step_ms = autoresume * 1000;
 	}
@@ -355,8 +283,6 @@ static int zero_bind(struct usb_composite_dev *cdev)
 			otg_desc[0] = usb_desc;
 			otg_desc[1] = NULL;
 		}
-		sourcesink_driver.descriptors = otg_desc;
-		sourcesink_driver.bmAttributes |= USB_CONFIG_ATT_WAKEUP;
 		loopback_driver.descriptors = otg_desc;
 		loopback_driver.bmAttributes |= USB_CONFIG_ATT_WAKEUP;
 	}
@@ -364,18 +290,8 @@ static int zero_bind(struct usb_composite_dev *cdev)
 	/* Register primary, then secondary configuration.  Note that
 	 * SH3 only allows one config...
 	 */
-	if (loopdefault) {
-		usb_add_config_only(cdev, &loopback_driver);
-		usb_add_config_only(cdev, &sourcesink_driver);
-	} else {
-		usb_add_config_only(cdev, &sourcesink_driver);
-		usb_add_config_only(cdev, &loopback_driver);
-	}
-	status = usb_add_function(&sourcesink_driver, func_ss);
-	if (status)
-		goto err_free_otg_desc;
+	usb_add_config_only(cdev, &loopback_driver);
 
-	usb_ep_autoconfig_reset(cdev->gadget);
 	status = usb_add_function(&loopback_driver, func_lb);
 	if (status)
 		goto err_free_otg_desc;
@@ -396,21 +312,12 @@ err_conf_flb:
 err_put_func_inst_lb:
 	usb_put_function_instance(func_inst_lb);
 	func_inst_lb = NULL;
-err_put_func_ss:
-	usb_put_function(func_ss);
-	func_ss = NULL;
-err_put_func_inst_ss:
-	usb_put_function_instance(func_inst_ss);
-	func_inst_ss = NULL;
 	return status;
 }
 
 static int zero_unbind(struct usb_composite_dev *cdev)
 {
 	del_timer_sync(&autoresume_timer);
-	if (!IS_ERR_OR_NULL(func_ss))
-		usb_put_function(func_ss);
-	usb_put_function_instance(func_inst_ss);
 	if (!IS_ERR_OR_NULL(func_lb))
 		usb_put_function(func_lb);
 	usb_put_function_instance(func_inst_lb);

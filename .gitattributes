@@ -9,5 +9,6 @@ rpi/source/simplegadget/Makefile text eol=lf
 
 rpi/source/simpleufn/*.c text eol=lf
 rpi/source/simpleufn/*.h text eol=lf
+rpi/source/simpleufn/inc/*.h text eol=lf
 rpi/source/simpleufn/Makefile text eol=lf
 
