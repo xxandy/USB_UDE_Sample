@@ -19,8 +19,8 @@
 #include <linux/err.h>
 #include <linux/usb/composite.h>
 
-#include "u_f.h"
-#include "g_zero.h"
+#include "u_f.h" // from gaget utilities, part of Linux
+#include "f_one.h" // defines the interface of this function, usable by gadgets that need this function.
 
 /*
  * LOOPBACK FUNCTION ... a testing vehicle for USB peripherals,
@@ -297,12 +297,35 @@ free_req:
 	}
 }
 
+static void disable_ep(struct usb_composite_dev *cdev, struct usb_ep *ep)
+{
+	int			value;
+
+	value = usb_ep_disable(ep);
+	if (value < 0)
+		DBG(cdev, "disable %s --> %d\n", ep->name, value);
+}
+
+static void lbfn_disable_endpoints(struct usb_composite_dev *cdev,
+		struct usb_ep *in, struct usb_ep *out,
+		struct usb_ep *iso_in, struct usb_ep *iso_out)
+{
+	disable_ep(cdev, in);
+	disable_ep(cdev, out);
+	if (iso_in)
+		disable_ep(cdev, iso_in);
+	if (iso_out)
+		disable_ep(cdev, iso_out);
+}
+
+
+
 static void disable_loopback(struct f_loopback *loop)
 {
 	struct usb_composite_dev	*cdev;
 
 	cdev = loop->function.config->cdev;
-	disable_endpoints(cdev, loop->in_ep, loop->out_ep, NULL, NULL);
+	lbfn_disable_endpoints(cdev, loop->in_ep, loop->out_ep, NULL, NULL);
 	VDBG(cdev, "%s disabled\n", loop->function.name);
 }
 
@@ -579,29 +602,31 @@ static struct usb_function_instance *loopback_alloc_instance(void)
 		return ERR_PTR(-ENOMEM);
 	mutex_init(&lb_opts->lock);
 	lb_opts->func_inst.free_func_inst = lb_free_instance;
-	lb_opts->bulk_buflen = GZERO_BULK_BUFLEN;
-	lb_opts->qlen = GZERO_QLEN;
+	lb_opts->bulk_buflen = F_ONE_DEFAULT_BULK_BUFLEN;
+	lb_opts->qlen = F_ONE_DEFAULT_QLEN;
 
 	config_group_init_type_name(&lb_opts->func_inst.group, "",
 				    &lb_func_type);
 
 	return  &lb_opts->func_inst;
 }
-DECLARE_USB_FUNCTION(Hunchback, loopback_alloc_instance, loopback_alloc);
+DECLARE_USB_FUNCTION(OTLoopBck, loopback_alloc_instance, loopback_alloc);
 
 int __init hhb_modinit(void)
 {
 	int i;
         printk("v1 - About to register function\n");
-	i = usb_function_register(&Hunchbackusb_func);
+	i = usb_function_register(&OTLoopBckusb_func);
         printk("Registration return %d\n", i );
         return i;
 }
 
 void __exit hhb_modexit(void)
 {
-	usb_function_unregister(&Hunchbackusb_func);
+	usb_function_unregister(&OTLoopBckusb_func);
 }
 
+module_init(hhb_modinit);
+module_exit(hhb_modexit);
 
 MODULE_LICENSE("GPL");
