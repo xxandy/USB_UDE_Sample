@@ -1,4 +1,4 @@
-*# USB UDE Sample
+# USB UDE Sample
 UDE (USB Device Emulation) Virtual USB device sample (hardware-less), with matching Host-Side drivers. Used as a USB study test bed. Can also be the starting point for developing other Virtual USB devices.
 
 This project is a reference/sample that serves to illustrate programming UDE (USB Device Emulation) devices, per the architecture at infrastructure Windows provides at https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-emulated-device--ude--architecture
