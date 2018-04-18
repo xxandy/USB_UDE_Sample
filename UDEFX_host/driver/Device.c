@@ -846,7 +846,7 @@ Return Value:
     }
 
     //
-    // If we didn't find all the 3 pipes, fail the start.
+    // If we didn't find the OUT pipe we want, fail
     //
     if(!(pDeviceContext->BulkWritePipe
 	        && pDeviceContext->BulkReadPipe)) {
