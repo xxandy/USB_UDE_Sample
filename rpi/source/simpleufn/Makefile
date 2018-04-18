@@ -1,10 +1,10 @@
 LINUX_TGT = $(HOME)/rpi/linux
-EXTRA_CFLAGS := -I$(src)/src/inc -I$(LINUX_TGT)/drivers/usb/gadget -I$(LINUX_TGT)/drivers/usb/gadget/function
+EXTRA_CFLAGS := -I$(src)/src/inc -I$(LINUX_TGT)/drivers/usb/gadget -I$(LINUX_TGT)/drivers/usb/gadget/function -I$(src)/inc
 obj-m += simpleufn.o
 
 
 
-simpleufn-objs := f_hunchback.o f_simpless.o
+simpleufn-objs := f_one.o
 
 
 
