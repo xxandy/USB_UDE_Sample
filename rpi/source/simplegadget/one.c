@@ -41,7 +41,7 @@ USB_GADGET_COMPOSITE_OPTIONS();
 
 #define DRIVER_VERSION		"Cinco de Mayo 2008"
 
-static const char longname[] = "Gadget Zero";
+static const char longname[] = "Gadget One";
 
 
 static struct usb_zero_options gzero_options = {
@@ -91,7 +91,7 @@ static struct usb_device_descriptor device_desc = {
 
 	.idVendor =		cpu_to_le16(DRIVER_VENDOR_NUM),
 	.idProduct =		cpu_to_le16(DRIVER_PRODUCT_NUM),
-	.bNumConfigurations =	2,
+	.bNumConfigurations =	1,
 };
 
 static const struct usb_descriptor_header *otg_desc[2];
@@ -100,14 +100,12 @@ static const struct usb_descriptor_header *otg_desc[2];
 /* default serial number takes at least two packets */
 static char serial[] = "0123456789.0123456789.0100020000";
 
-#define USB_GZERO_SS_DESC	(USB_GADGET_FIRST_AVAIL_IDX + 0)
-#define USB_GZERO_LB_DESC	(USB_GADGET_FIRST_AVAIL_IDX + 1)
+#define USB_GZERO_LB_DESC	(USB_GADGET_FIRST_AVAIL_IDX + 0)
 
 static struct usb_string strings_dev[] = {
-	[USB_GADGET_MANUFACTURER_IDX].s = "",
+	[USB_GADGET_MANUFACTURER_IDX].s = "XSample Mfg",
 	[USB_GADGET_PRODUCT_IDX].s = longname,
 	[USB_GADGET_SERIAL_IDX].s = serial,
-	[USB_GZERO_SS_DESC].s	= "source and sink data",
 	[USB_GZERO_LB_DESC].s	= "loop input to output",
 	{  }			/* end of list */
 };
