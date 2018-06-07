@@ -569,7 +569,7 @@ AutoBot(LPCGUID guid)
 
         buffer[(sizeof(buffer) / sizeof(buffer[0])) - 1] = 0;
         printf("Got a Mission!!, text=%s, bytes=%d\n", buffer, nBytesRead);
-        for (int x = 0; x < 3; ++x)
+        for (int x = 0; x < 8; ++x)
         {
             printf("Working on the mission.. ticktock...\n"); fflush(stdout);
             Sleep(1500);
