@@ -12,7 +12,7 @@ The Kernel mode drivers are:
 UDEFX2.sys defines these endpoints:
 * <B>a BULK/IN endpoint</B>:  generates pattern data when read.
 * <B>a BULK/OUT endpoint</B>: traces incoming data for confirmation.
-* <B>an INTERRUPT/IN endpoint</B>:  Upon request from a back-channel controller test app (via a back-channel IOCTL), generates an interrupt from the device. Interrupt also generates Remote Wakeup if the virtual device is in low-power mode.
+* <B>an INTERRUPT/IN endpoint</B>:  Upon request from a back-channel controller test app (via a back-channel IOCTL), generates an interrupt from the virtual device. Interrupt also generates Remote Wakeup if the virtual device is in low-power mode.
 
 To build the drivers, you need:
 * Visual Studio 2017
