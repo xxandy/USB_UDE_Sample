@@ -147,7 +147,7 @@ WRQueuePushWrite(
         status = STATUS_SUCCESS; // til proven otherwise
 
         // allocate
-        pNewEntry = ExAllocatePool(PagedPool, sizeof(BUFFER_CONTENT) + wlen);
+        pNewEntry = ExAllocatePool2(POOL_FLAG_PAGED, sizeof(BUFFER_CONTENT) + wlen, UDEFX_POOL_TAG);
         if (pNewEntry == NULL) {
             TraceEvents(TRACE_LEVEL_ERROR,
                 TRACE_QUEUE,
