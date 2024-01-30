@@ -201,6 +201,9 @@
       <Command>inf2cat /driver:$(ProjectDir)$(IntDir) /os:10_x64</Command>
       <Message>catalog file for x64 release</Message>
     </PostBuildEvent>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -213,6 +216,9 @@
     <PostBuildEvent>
       <Message>catalog file for x64 debug</Message>
     </PostBuildEvent>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -225,6 +231,9 @@
     <PostBuildEvent>
       <Message>inf2cat for win32 release</Message>
     </PostBuildEvent>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -237,6 +246,9 @@
     <PostBuildEvent>
       <Message>inf2cat for win32 debug</Message>
     </PostBuildEvent>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ResourceCompile Include="hostude.rc" />
