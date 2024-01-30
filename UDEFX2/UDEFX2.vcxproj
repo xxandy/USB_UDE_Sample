@@ -174,6 +174,9 @@
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\ude\1.0\udecxstub.lib;usbdex.lib;WdmSec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -185,6 +188,9 @@
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\ude\1.0\udecxstub.lib;usbdex.lib;WdmSec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -196,6 +202,9 @@
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\ude\1.0\udecxstub.lib;usbdex.lib;WdmSec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -207,6 +216,9 @@
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\ude\1.0\udecxstub.lib;usbdex.lib;WdmSec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
