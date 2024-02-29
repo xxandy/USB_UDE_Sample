@@ -2,6 +2,9 @@
 certutil.exe -addstore root hostude.cer
 certutil.exe -addstore trustedpublisher hostude.cer
 
-devcon.exe install hostude.inf "USB\VID_1209&PID_0887"
+:: Install drivers
+pnputil.exe /add-driver hostude.inf /install
+pnputil.exe /add-driver UDEFX2.inf /install
 
-devcon.exe install UDEFX2.inf Root\UDEFX2
+:: Create SW device
+devgen.exe /add /instanceid 1 /hardwareid "Root\UDEFX2"
