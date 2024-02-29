@@ -62,9 +62,6 @@
     <ConfigurationType>Driver</ConfigurationType>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <PropertyGroup>
-    <OutDir>$(IntDir)</OutDir>
-  </PropertyGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
   </ImportGroup>
@@ -198,7 +195,7 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(ProjectDir)$(IntDir) /os:10_x64</Command>
+      <Command>inf2cat /driver:$(OutDir) /os:10_x64</Command>
       <Message>catalog file for x64 release</Message>
     </PostBuildEvent>
     <DriverSign>
@@ -211,7 +208,7 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(ProjectDir)$(IntDir) /os:10_x64</Command>
+      <Command>inf2cat /driver:$(OutDir) /os:10_x64</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>catalog file for x64 debug</Message>
@@ -226,7 +223,7 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(ProjectDir)$(IntDir) /os:10_x86</Command>
+      <Command>inf2cat /driver:$(OutDir) /os:10_x86</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>inf2cat for win32 release</Message>
@@ -241,7 +238,7 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(ProjectDir)$(IntDir) /os:10_x86</Command>
+      <Command>inf2cat /driver:$(OutDir) /os:10_x86</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>inf2cat for win32 debug</Message>
