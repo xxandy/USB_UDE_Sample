@@ -195,7 +195,8 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(OutDir) /os:10_x64</Command>
+      <Command>inf2cat /driver:$(OutDir) /os:10_x64
+copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
       <Message>catalog file for x64 release</Message>
     </PostBuildEvent>
     <DriverSign>
@@ -208,7 +209,8 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(OutDir) /os:10_x64</Command>
+      <Command>inf2cat /driver:$(OutDir) /os:10_x64
+copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>catalog file for x64 debug</Message>
@@ -223,7 +225,8 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(OutDir) /os:10_x86</Command>
+      <Command>inf2cat /driver:$(OutDir) /os:10_x86
+copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x86\devcon.exe" $(OutDir)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>inf2cat for win32 release</Message>
@@ -238,7 +241,8 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(OutDir) /os:10_x86</Command>
+      <Command>inf2cat /driver:$(OutDir) /os:10_x86
+copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x86\devcon.exe" $(OutDir)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>inf2cat for win32 debug</Message>
