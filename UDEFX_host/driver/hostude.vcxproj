@@ -13,9 +13,6 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{22E6FB5D-9B01-443D-A641-B25B62454080}</ProjectGuid>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
-    <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
-    <SupportsPackaging>false</SupportsPackaging>
-    <RequiresPackageProject>true</RequiresPackageProject>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>
     <SampleGuid>{3EBA8CBF-2E65-4819-9EEA-E10825BB0705}</SampleGuid>
