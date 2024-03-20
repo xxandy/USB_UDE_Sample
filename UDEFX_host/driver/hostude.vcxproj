@@ -115,9 +115,7 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(OutDir) /os:10_x64
-copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
-      <Message>catalog file for x64 release</Message>
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
     </PostBuildEvent>
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
@@ -129,11 +127,7 @@ copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(OutDir) /os:10_x64
-copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>catalog file for x64 debug</Message>
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
     </PostBuildEvent>
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
