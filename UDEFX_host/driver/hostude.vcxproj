@@ -13,9 +13,6 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{22E6FB5D-9B01-443D-A641-B25B62454080}</ProjectGuid>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
-    <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
-    <SupportsPackaging>false</SupportsPackaging>
-    <RequiresPackageProject>true</RequiresPackageProject>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>
     <SampleGuid>{3EBA8CBF-2E65-4819-9EEA-E10825BB0705}</SampleGuid>
@@ -117,9 +114,7 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(OutDir) /os:10_x64
-copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
-      <Message>catalog file for x64 release</Message>
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
     </PostBuildEvent>
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
@@ -131,11 +126,7 @@ copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>inf2cat /driver:$(OutDir) /os:10_x64
-copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>catalog file for x64 debug</Message>
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
     </PostBuildEvent>
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
