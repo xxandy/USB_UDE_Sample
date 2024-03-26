@@ -114,7 +114,8 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(PackageDir)
+copy $(OutDir)\hostude.cer $(PackageDir)</Command>
     </PostBuildEvent>
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
@@ -126,7 +127,8 @@
       </ExceptionHandling>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(OutDir)</Command>
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(PackageDir)
+copy $(OutDir)\hostude.cer $(PackageDir)</Command>
     </PostBuildEvent>
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
