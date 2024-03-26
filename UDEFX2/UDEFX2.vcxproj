@@ -118,7 +118,7 @@
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
     <PostBuildEvent>
-      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(PackageDir)</Command>
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devcon.exe" $(PackageDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -135,7 +135,7 @@
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
     <PostBuildEvent>
-      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\x64\devcon.exe" $(PackageDir)</Command>
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devcon.exe" $(PackageDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
@@ -149,7 +149,7 @@
       <AdditionalDependencies>$(DDK_LIB_PATH)\ude\1.0\udecxstub.lib;usbdex.lib;WdmSec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\arm64\devcon.exe" $(PackageDir)</Command>
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devcon.exe" $(PackageDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
@@ -163,7 +163,7 @@
       <AdditionalDependencies>$(DDK_LIB_PATH)\ude\1.0\udecxstub.lib;usbdex.lib;WdmSec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\arm64\devcon.exe" $(PackageDir)</Command>
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devcon.exe" $(PackageDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
