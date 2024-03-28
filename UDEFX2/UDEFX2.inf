@@ -9,6 +9,7 @@ ClassGuid={36FC9E60-C465-11CF-8056-444553540000} ; used for all usb devices
 Provider=%ManufacturerName%
 CatalogFile=UDEFX2.cat
 DriverVer=
+PnpLockdown=1
 
 [DestinationDirs]
 DefaultDestDir = 12
