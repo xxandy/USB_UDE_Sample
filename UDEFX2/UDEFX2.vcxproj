@@ -122,7 +122,7 @@
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
     <PostBuildEvent>
-      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devcon.exe" $(PackageDir)
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devgen.exe" $(PackageDir)
 copy $(OutDir)\UDEFX2.cer $(PackageDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -140,7 +140,7 @@ copy $(OutDir)\UDEFX2.cer $(PackageDir)</Command>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
     <PostBuildEvent>
-      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devcon.exe" $(PackageDir)
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devgen.exe" $(PackageDir)
 copy $(OutDir)\UDEFX2.cer $(PackageDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -155,7 +155,7 @@ copy $(OutDir)\UDEFX2.cer $(PackageDir)</Command>
       <AdditionalDependencies>$(DDK_LIB_PATH)\ude\1.0\udecxstub.lib;usbdex.lib;WdmSec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devcon.exe" $(PackageDir)
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devgen.exe" $(PackageDir)
 copy $(OutDir)\UDEFX2.cer $(PackageDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -170,7 +170,7 @@ copy $(OutDir)\UDEFX2.cer $(PackageDir)</Command>
       <AdditionalDependencies>$(DDK_LIB_PATH)\ude\1.0\udecxstub.lib;usbdex.lib;WdmSec.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devcon.exe" $(PackageDir)
+      <Command>copy "C:\Program Files (x86)\Windows Kits\10\tools\$(WDKBuildFolder)\$(Platform)\devgen.exe" $(PackageDir)
 copy $(OutDir)\UDEFX2.cer $(PackageDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
