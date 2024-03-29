@@ -4,5 +4,3 @@ popd
 pushd %~dp0\UDEFX_host
 call share.bat
 popd
-
-copy /y installem.bat %userprofile%\vmshare\usbt
