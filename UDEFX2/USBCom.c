@@ -49,15 +49,12 @@ NTSTATUS. Could fail on allocation failure or the same context type already exis
 
 --*/
 {
-    NTSTATUS status;
     WDF_OBJECT_ATTRIBUTES attributes;
-
     WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, IO_CONTEXT);
 
-    status = WdfObjectAllocateContext(Object, &attributes, NULL);
+    NTSTATUS status = WdfObjectAllocateContext(Object, &attributes, NULL);
 
     if (!NT_SUCCESS(status)) {
-
         LogError(TRACE_DEVICE, "Unable to allocate new context for WDF object %p", Object);
         goto exit;
     }
@@ -81,8 +78,6 @@ IoEvtControlUrb(
     _In_ ULONG IoControlCode
 )
 {
-    WDF_USB_CONTROL_SETUP_PACKET setupPacket;
-    NTSTATUS status;
     UNREFERENCED_PARAMETER(Queue);
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
@@ -94,8 +89,8 @@ IoEvtControlUrb(
         // These are on the control pipe.
         // We don't do anything special with these requests,
         // but this is where we would add processing for vendor-specific commands.
-
-        status = UdecxUrbRetrieveControlSetupPacket(Request, &setupPacket);
+        WDF_USB_CONTROL_SETUP_PACKET setupPacket;
+        NTSTATUS status = UdecxUrbRetrieveControlSetupPacket(Request, &setupPacket);
 
         if (!NT_SUCCESS(status))
         {
@@ -143,21 +138,15 @@ IoEvtBulkOutUrb(
     _In_ ULONG IoControlCode
 )
 {
-    WDFREQUEST matchingRead;
-    WDFDEVICE backchannel;
-    PUDECX_BACKCHANNEL_CONTEXT pBackChannelContext;
-    PENDPOINTQUEUE_CONTEXT pEpQContext;
     NTSTATUS status = STATUS_SUCCESS;
-    PUCHAR transferBuffer;
     ULONG transferBufferLength = 0;
-    SIZE_T completeBytes = 0;
 
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
 
-    pEpQContext = GetEndpointQueueContext(Queue);
-    backchannel = pEpQContext->backChannelDevice;
-    pBackChannelContext = GetBackChannelContext(backchannel);
+    PENDPOINTQUEUE_CONTEXT pEpQContext = GetEndpointQueueContext(Queue);
+    WDFDEVICE backchannel = pEpQContext->backChannelDevice;
+    PUDECX_BACKCHANNEL_CONTEXT pBackChannelContext = GetBackChannelContext(backchannel);
 
     if (IoControlCode != IOCTL_INTERNAL_USB_SUBMIT_URB)
     {
@@ -167,6 +156,7 @@ IoEvtBulkOutUrb(
         goto exit;
     }
 
+    PUCHAR transferBuffer;
     status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
     if (!NT_SUCCESS(status))
     {
@@ -176,6 +166,7 @@ IoEvtBulkOutUrb(
     }
 
     // try to get us information about a request that may be waiting for this info
+    WDFREQUEST matchingRead;
     status = WRQueuePushWrite(
         &(pBackChannelContext->missionRequest),
         transferBuffer,
@@ -189,12 +180,11 @@ IoEvtBulkOutUrb(
 
         // this is a back-channel read, not a USB read!
         status = WdfRequestRetrieveOutputBuffer(matchingRead, 1, &rbuffer, &rlen);
+        SIZE_T completeBytes = 0;
 
         if (!NT_SUCCESS(status))  {
-
             LogError(TRACE_DEVICE, "WdfRequest %p cannot retrieve mission completion buffer %!STATUS!",
                 matchingRead, status);
-
         } else  {
             completeBytes = MINLEN(rlen, transferBufferLength);
             memcpy(rbuffer, transferBuffer, completeBytes);
@@ -206,8 +196,6 @@ IoEvtBulkOutUrb(
     } else {
         LogInfo(TRACE_DEVICE, "Mission request %p enqueued", Request);
     }
-
-
 
 exit:
     // writes never pended, always completed
@@ -230,20 +218,13 @@ IoEvtBulkInUrb(
 )
 {
     NTSTATUS status = STATUS_SUCCESS;
-    WDFDEVICE backchannel;
-    PUDECX_BACKCHANNEL_CONTEXT pBackChannelContext;
-    PENDPOINTQUEUE_CONTEXT pEpQContext;
-    BOOLEAN bReady = FALSE;
-    PUCHAR transferBuffer;
-    ULONG transferBufferLength;
-    SIZE_T completeBytes = 0;
 
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
 
-    pEpQContext = GetEndpointQueueContext(Queue);
-    backchannel = pEpQContext->backChannelDevice;
-    pBackChannelContext = GetBackChannelContext(backchannel);
+    PENDPOINTQUEUE_CONTEXT pEpQContext = GetEndpointQueueContext(Queue);
+    WDFDEVICE backchannel = pEpQContext->backChannelDevice;
+    PUDECX_BACKCHANNEL_CONTEXT pBackChannelContext = GetBackChannelContext(backchannel);
 
     if (IoControlCode != IOCTL_INTERNAL_USB_SUBMIT_URB)
     {
@@ -253,6 +234,8 @@ IoEvtBulkInUrb(
         goto exit;
     }
 
+    PUCHAR transferBuffer;
+    ULONG transferBufferLength;
     status = UdecxUrbRetrieveBuffer(Request, &transferBuffer, &transferBufferLength);
     if (!NT_SUCCESS(status))
     {
@@ -262,6 +245,8 @@ IoEvtBulkInUrb(
     }
 
     // try to get us information about a request that may be waiting for this info
+    SIZE_T completeBytes = 0;
+    BOOLEAN bReady = FALSE;
     status = WRQueuePullRead(
         &(pBackChannelContext->missionCompletion),
         Request,
@@ -302,11 +287,10 @@ IoCompletePendingRequest(
     _In_ WDFREQUEST request,
     _In_ DEVICE_INTR_FLAGS LatestStatus)
 {
-    NTSTATUS status = STATUS_SUCCESS;
     PUCHAR transferBuffer;
     ULONG transferBufferLength;
 
-    status = UdecxUrbRetrieveBuffer(request, &transferBuffer, &transferBufferLength);
+    NTSTATUS status = UdecxUrbRetrieveBuffer(request, &transferBuffer, &transferBufferLength);
     if (!NT_SUCCESS(status))
     {
         LogError(TRACE_DEVICE, "WdfRequest  %p unable to retrieve buffer %!STATUS!",
@@ -333,9 +317,7 @@ IoCompletePendingRequest(
 
 exit:
     UdecxUrbCompleteWithNtStatus(request, status);
-
     return;
-
 }
 
 
@@ -345,13 +327,10 @@ Io_RaiseInterrupt(
     _In_ UDECXUSBDEVICE    Device,
     _In_ DEVICE_INTR_FLAGS LatestStatus )
 {
-    PIO_CONTEXT pIoContext;
+    PIO_CONTEXT pIoContext = WdfDeviceGetIoContext(Device);
+
     WDFREQUEST request;
-    NTSTATUS status = STATUS_SUCCESS;
-
-    pIoContext = WdfDeviceGetIoContext(Device);
-
-    status = WdfIoQueueRetrieveNextRequest( pIoContext->IntrDeferredQueue, &request);
+    NTSTATUS status = WdfIoQueueRetrieveNextRequest( pIoContext->IntrDeferredQueue, &request);
 
     // no items in the queue?  it is safe to assume the device is sleeping
     if (!NT_SUCCESS(status))    {
@@ -385,24 +364,19 @@ IoEvtInterruptInUrb(
     _In_ ULONG IoControlCode
 )
 {
-    PIO_CONTEXT pIoContext;
-    UDECXUSBDEVICE tgtDevice;
     NTSTATUS status = STATUS_SUCCESS;
-    DEVICE_INTR_FLAGS LatestStatus = 0;
-    PENDPOINTQUEUE_CONTEXT pEpQContext;
 
-    BOOLEAN bHasData = FALSE;
 
     UNREFERENCED_PARAMETER(Request);
     UNREFERENCED_PARAMETER(OutputBufferLength);
     UNREFERENCED_PARAMETER(InputBufferLength);
 
 
-    pEpQContext = GetEndpointQueueContext(Queue);
+    PENDPOINTQUEUE_CONTEXT pEpQContext = GetEndpointQueueContext(Queue);
 
-    tgtDevice = pEpQContext->usbDeviceObj;
+    UDECXUSBDEVICE tgtDevice = pEpQContext->usbDeviceObj;
 
-    pIoContext = WdfDeviceGetIoContext(tgtDevice);
+    PIO_CONTEXT pIoContext = WdfDeviceGetIoContext(tgtDevice);
 
 
     if (IoControlCode != IOCTL_INTERNAL_USB_SUBMIT_URB)   {
@@ -410,6 +384,9 @@ IoEvtInterruptInUrb(
         status = STATUS_ACCESS_DENIED;
         goto exit;
     }
+
+    BOOLEAN bHasData = FALSE;
+    DEVICE_INTR_FLAGS LatestStatus = 0;
 
     // gate cached data we may have and clear it
     WdfSpinLockAcquire(pIoContext->IntrState.sync);
@@ -449,8 +426,6 @@ Io_CreateDeferredIntrQueue(
     _In_ WDFDEVICE   ControllerDevice,
     _In_ PIO_CONTEXT pIoContext )
 {
-    NTSTATUS status;
-    WDF_IO_QUEUE_CONFIG queueConfig;
 
     pIoContext->IntrState.latestStatus = 0;
     pIoContext->IntrState.numUnreadUpdates = 0;
@@ -460,6 +435,7 @@ Io_CreateDeferredIntrQueue(
     // This queue will be used for storing Requests that need to wait for an
     // interrupt to occur before they can be completed.
     //
+    WDF_IO_QUEUE_CONFIG queueConfig;
     WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
 
     // when a request gets canceled, this is where we want to do the completion
@@ -471,7 +447,7 @@ Io_CreateDeferredIntrQueue(
     //
     queueConfig.PowerManaged = WdfFalse;
 
-    status = WdfIoQueueCreate(ControllerDevice,
+    NTSTATUS status = WdfIoQueueCreate(ControllerDevice,
         &queueConfig,
         WDF_NO_OBJECT_ATTRIBUTES,
         &(pIoContext->IntrDeferredQueue)
@@ -502,8 +478,7 @@ Io_DeviceSlept(
     _In_ UDECXUSBDEVICE  Device
 )
 {
-    PIO_CONTEXT pIoContext;
-    pIoContext = WdfDeviceGetIoContext(Device);
+    PIO_CONTEXT pIoContext = WdfDeviceGetIoContext(Device);
 
     // thi will result in all current requests being canceled
     LogInfo(TRACE_DEVICE, "About to purge deferred request queue" );
@@ -518,8 +493,7 @@ Io_DeviceWokeUp(
     _In_ UDECXUSBDEVICE  Device
 )
 {
-    PIO_CONTEXT pIoContext;
-    pIoContext = WdfDeviceGetIoContext(Device);
+    PIO_CONTEXT pIoContext = WdfDeviceGetIoContext(Device);
 
     // thi will result in all current requests being canceled
     LogInfo(TRACE_DEVICE, "About to re-start paused deferred queue");
@@ -536,20 +510,14 @@ Io_RetrieveEpQueue(
     _Out_ WDFQUEUE     * Queue
 )
 {
-    NTSTATUS status;
-    PIO_CONTEXT pIoContext;
-    PUSB_CONTEXT pUsbContext;
-    WDF_IO_QUEUE_CONFIG queueConfig;
-    WDFDEVICE wdfController;
     WDFQUEUE *pQueueRecord = NULL;
-    WDF_OBJECT_ATTRIBUTES  attributes;
     PFN_WDF_IO_QUEUE_IO_INTERNAL_DEVICE_CONTROL pIoCallback = NULL;
 
-    status = STATUS_SUCCESS;
-    pIoContext = WdfDeviceGetIoContext(Device);
-    pUsbContext = GetUsbDeviceContext(Device);
+    NTSTATUS status = STATUS_SUCCESS;
+    PIO_CONTEXT pIoContext = WdfDeviceGetIoContext(Device);
+    PUSB_CONTEXT pUsbContext = GetUsbDeviceContext(Device);
 
-    wdfController = pUsbContext->ControllerDevice;
+    WDFDEVICE wdfController = pUsbContext->ControllerDevice;
 
     switch (EpAddr)
     {
@@ -587,11 +555,12 @@ Io_RetrieveEpQueue(
     }
 
     if ( (*pQueueRecord)  == NULL) {
-        PENDPOINTQUEUE_CONTEXT pEPQContext;
+        WDF_IO_QUEUE_CONFIG queueConfig;
         WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchSequential);
 
         //Sequential must specify this callback
         queueConfig.EvtIoInternalDeviceControl = pIoCallback;
+        WDF_OBJECT_ATTRIBUTES  attributes;
         WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, ENDPOINTQUEUE_CONTEXT);
 
         status = WdfIoQueueCreate(wdfController,
@@ -599,6 +568,7 @@ Io_RetrieveEpQueue(
             &attributes,
             pQueueRecord);
 
+        PENDPOINTQUEUE_CONTEXT pEPQContext;
         pEPQContext = GetEndpointQueueContext(*pQueueRecord);
         pEPQContext->usbDeviceObj      = Device;
         pEPQContext->backChannelDevice = wdfController; // this is a dirty little secret, so we contain it.
@@ -656,6 +626,3 @@ Io_FreeEndpointQueues(
     WdfObjectDelete(pIoContext->BulkOutQueue);
 
 }
-
-
-

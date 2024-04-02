@@ -48,19 +48,16 @@ WRQueueInit(
     _In_    BOOLEAN bUSBReqQueue
 )
 {
-    NTSTATUS status;
-    WDF_IO_QUEUE_CONFIG queueConfig;
-
     memset(pQ, 0, sizeof(*pQ));
 
-    status = STATUS_SUCCESS;
+    WDF_IO_QUEUE_CONFIG queueConfig;
     WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
 
     // when a request gets canceled, this is where we want to do the completion
     queueConfig.EvtIoCanceledOnQueue = (bUSBReqQueue ? _WQQCancelUSBRequest : _WQQCancelRequest );
 
 
-    status = WdfSpinLockCreate(WDF_NO_OBJECT_ATTRIBUTES, &(pQ->qsync));
+    NTSTATUS status = WdfSpinLockCreate(WDF_NO_OBJECT_ATTRIBUTES, &(pQ->qsync));
     if (!NT_SUCCESS(status) )  {
         pQ->qsync = NULL;
         TraceEvents(TRACE_LEVEL_ERROR,
@@ -128,7 +125,6 @@ WRQueuePushWrite(
 )
 {
     NTSTATUS status;
-    WDFREQUEST firstPendingRead;
 
     if (rqReadToComplete == NULL) {
         status = STATUS_INVALID_PARAMETER;
@@ -138,6 +134,7 @@ WRQueuePushWrite(
     (*rqReadToComplete) = NULL;
 
 
+    WDFREQUEST firstPendingRead;
     status = WdfIoQueueRetrieveNextRequest(pQ->ReadBufferQueue, &firstPendingRead);
     if ( NT_SUCCESS(status) )  {
         (*rqReadToComplete) = firstPendingRead;
@@ -184,8 +181,6 @@ WRQueuePullRead(
 )
 {
     NTSTATUS status;
-    PLIST_ENTRY firstPendingWrite;
-    PBUFFER_CONTENT pWriteEntry = NULL;
 
     if (pbReadyToComplete == NULL) {
         status = STATUS_INVALID_PARAMETER;
@@ -205,7 +200,7 @@ WRQueuePullRead(
     (*completedBytes) = 0;
 
     WdfSpinLockAcquire(pQ->qsync);
-    firstPendingWrite = RemoveHeadList( &(pQ->WriteBufferQueue) );
+    PLIST_ENTRY firstPendingWrite = RemoveHeadList( &(pQ->WriteBufferQueue) );
     WdfSpinLockRelease(pQ->qsync);
 
     if (firstPendingWrite == &(pQ->WriteBufferQueue) ) {
@@ -220,7 +215,7 @@ WRQueuePullRead(
 
     } else {
         size_t minlen;
-        pWriteEntry = CONTAINING_RECORD(firstPendingWrite, BUFFER_CONTENT, BufferLink);
+        PBUFFER_CONTENT pWriteEntry = CONTAINING_RECORD(firstPendingWrite, BUFFER_CONTENT, BufferLink);
 
         minlen = MINLEN(pWriteEntry->BufferLength, rlen);
         memcpy(rbuffer, &(pWriteEntry->BufferStart), minlen);
@@ -234,6 +229,3 @@ WRQueuePullRead(
 Exit:
     return status;
 }
-
-
-

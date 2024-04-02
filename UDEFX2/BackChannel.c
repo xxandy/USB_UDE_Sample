@@ -39,12 +39,9 @@ BackChannelInit(
     _In_ WDFDEVICE ctrdevice
 )
 {
-    NTSTATUS status = STATUS_SUCCESS;
-    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
+    PUDECX_USBCONTROLLER_CONTEXT pControllerContext = GetUsbControllerContext(ctrdevice);
 
-    pControllerContext = GetUsbControllerContext(ctrdevice);
-
-    status = WRQueueInit(ctrdevice, &(pControllerContext->missionRequest), FALSE);
+    NTSTATUS status = WRQueueInit(ctrdevice, &(pControllerContext->missionRequest), FALSE);
     if (!NT_SUCCESS(status)) {
         LogError(TRACE_DEVICE, "Unable to initialize mission completion, err= %!STATUS!", status);
         goto exit;
@@ -66,9 +63,7 @@ BackChannelDestroy(
     _In_ WDFDEVICE ctrdevice
 )
 {
-    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
-
-    pControllerContext = GetUsbControllerContext(ctrdevice);
+    PUDECX_USBCONTROLLER_CONTEXT pControllerContext = GetUsbControllerContext(ctrdevice);
 
     WRQueueDestroy(&(pControllerContext->missionCompletion));
     WRQueueDestroy(&(pControllerContext->missionRequest));
@@ -81,9 +76,6 @@ BackChannelEvtRead(
     size_t     Length
 )
 {
-    WDFDEVICE controller;
-    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
-    NTSTATUS status = STATUS_SUCCESS;
     BOOLEAN bReady = FALSE;
     PVOID transferBuffer;
     SIZE_T transferBufferLength;
@@ -91,10 +83,10 @@ BackChannelEvtRead(
 
     UNREFERENCED_PARAMETER(Length);
 
-    controller = WdfIoQueueGetDevice(Queue); /// WdfIoQueueGetDevice
-    pControllerContext = GetUsbControllerContext(controller);
+    WDFDEVICE controller = WdfIoQueueGetDevice(Queue); /// WdfIoQueueGetDevice
+    PUDECX_USBCONTROLLER_CONTEXT pControllerContext = GetUsbControllerContext(controller);
 
-    status = WdfRequestRetrieveOutputBuffer(Request, 1, &transferBuffer, &transferBufferLength);
+    NTSTATUS status = WdfRequestRetrieveOutputBuffer(Request, 1, &transferBuffer, &transferBufferLength);
     if (!NT_SUCCESS(status))
     {
         LogError(TRACE_DEVICE, "BCHAN WdfRequest read %p unable to retrieve buffer %!STATUS!",
@@ -133,20 +125,17 @@ BackChannelEvtWrite(
     size_t Length
 )
 {
-    WDFDEVICE controller;
     WDFREQUEST matchingRead;
-    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
-    NTSTATUS status = STATUS_SUCCESS;
     PVOID transferBuffer;
     SIZE_T transferBufferLength;
     SIZE_T completeBytes = 0;
 
     UNREFERENCED_PARAMETER(Length);
 
-    controller = WdfIoQueueGetDevice(Queue); /// WdfIoQueueGetDevice
-    pControllerContext = GetUsbControllerContext(controller);
+    WDFDEVICE controller = WdfIoQueueGetDevice(Queue); /// WdfIoQueueGetDevice
+    PUDECX_USBCONTROLLER_CONTEXT pControllerContext = GetUsbControllerContext(controller);
 
-    status = WdfRequestRetrieveInputBuffer(Request, 1, &transferBuffer, &transferBufferLength);
+    NTSTATUS status = WdfRequestRetrieveInputBuffer(Request, 1, &transferBuffer, &transferBufferLength);
     if (!NT_SUCCESS(status))
     {
         LogError(TRACE_DEVICE, "BCHAN WdfRequest write %p unable to retrieve buffer %!STATUS!",
@@ -208,9 +197,8 @@ BackChannelIoctl(
     NTSTATUS status;
     PDEVICE_INTR_FLAGS pflags = 0;
     size_t pblen;
-    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
 
-    pControllerContext = GetUsbControllerContext(ctrdevice);
+    PUDECX_USBCONTROLLER_CONTEXT pControllerContext = GetUsbControllerContext(ctrdevice);
 
 
     switch (IoControlCode)

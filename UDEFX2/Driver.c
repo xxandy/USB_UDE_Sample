@@ -55,10 +55,6 @@ Return Value:
 
 --*/
 {
-    WDF_DRIVER_CONFIG config;
-    NTSTATUS status;
-    WDF_OBJECT_ATTRIBUTES attributes;
-
     //
     // Initialize WPP Tracing
     //
@@ -70,15 +66,17 @@ Return Value:
     // Register a cleanup callback so that we can call WPP_CLEANUP when
     // the framework driver object is deleted during driver unload.
     //
+    WDF_OBJECT_ATTRIBUTES attributes;
     WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
     attributes.EvtCleanupCallback = UDEFX2EvtDriverContextCleanup;
 
+    WDF_DRIVER_CONFIG config;
     WDF_DRIVER_CONFIG_INIT(&config,
                            UDEFX2EvtDeviceAdd
                            );
 	config.DriverPoolTag = UDEFX_POOL_TAG;
 
-    status = WdfDriverCreate(DriverObject,
+    NTSTATUS status = WdfDriverCreate(DriverObject,
                              RegistryPath,
                              &attributes,
                              &config,
@@ -120,15 +118,13 @@ Return Value:
 
 --*/
 {
-    NTSTATUS status;
-
     UNREFERENCED_PARAMETER(Driver);
 
     PAGED_CODE();
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
 
-    status = UDEFX2CreateDevice(DeviceInit);
+    NTSTATUS status = UDEFX2CreateDevice(DeviceInit);
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
 
