@@ -31,9 +31,13 @@ DECLARE_CONST_UNICODE_STRING(g_ManufacturerStringEnUs, L"Microsoft");
 DECLARE_CONST_UNICODE_STRING(g_ProductStringEnUs, L"UDE Client");
 
 
-const USHORT AMERICAN_ENGLISH = 0x409;
+#define AMERICAN_ENGLISH 0x0409
 
-const UCHAR g_LanguageDescriptor[] = { 4,3,9,4 };
+const USB_STRING_DESCRIPTOR g_LanguageDescriptor = {
+    sizeof(USB_STRING_DESCRIPTOR),// bLength
+    USB_STRING_DESCRIPTOR_TYPE,   // bDescriptorType
+    AMERICAN_ENGLISH              // bString[1]
+};
 
 
 
@@ -116,18 +120,11 @@ UsbValidateConstants(
     //
     // C_ASSERT doesn't treat these expressions as constant, so use NT_ASSERT
     //
-    NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bString[0] == AMERICAN_ENGLISH);
-    //NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bString[1] == PRC_CHINESE);
-
     NT_ASSERT(((PUSB_CONFIGURATION_DESCRIPTOR)g_UsbConfigDescriptorSet)->wTotalLength ==
         sizeof(g_UsbConfigDescriptorSet));
-    NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bLength ==
-        sizeof(g_LanguageDescriptor));
 
     NT_ASSERT(((PUSB_CONFIGURATION_DESCRIPTOR)g_UsbConfigDescriptorSet)->bDescriptorType ==
         USB_CONFIGURATION_DESCRIPTOR_TYPE);
-    NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bDescriptorType ==
-        USB_STRING_DESCRIPTOR_TYPE);
 }
 
 
@@ -197,7 +194,7 @@ Usb_Initialize(
     // String descriptors
     //
     status = UdecxUsbDeviceInitAddDescriptorWithIndex(controllerContext->ChildDeviceInit,
-        (PUCHAR)g_LanguageDescriptor,
+        (PUCHAR)&g_LanguageDescriptor,
         sizeof(g_LanguageDescriptor),
         0);
 
