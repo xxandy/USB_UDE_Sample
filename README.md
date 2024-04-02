@@ -18,9 +18,10 @@ To build the drivers, you need:
 * Visual Studio 2017
 * The WDK, along with the WDK extension for Visual Studio
 
-To install the drivers, have all the sys/inf/cat files that result from the build on a single directory, and run this command from an Administrator DOS prompt:
-* <B>installem.bat</B>
-(you'll need to have your system in Test Mode, as the drivers aren't signed)
+Steps to install the drivers:
+* Disable Secure Boot in UEFI/BIOS.
+* Run [`bcdedit /set testsigning on`](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/the-testsigning-boot-configuration-option) from an Administrator command prompt to enable loading of test-signed drivers.
+* Copy the sys/inf/cat files to the same folder as installem.bat. Then run `installem.bat` from an Administrator command prompt to install the drivers and create a virtual UDEFX2 device.
 
 To watch the driver behavior, you can use these scripts:
 * <B>tr_on.bat</B> :  turns trace on
