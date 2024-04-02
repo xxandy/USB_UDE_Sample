@@ -37,19 +37,17 @@ const UCHAR g_LanguageDescriptor[] = { 4,3,9,4 };
 
 
 
-const UCHAR g_UsbDeviceDescriptor[18] =
-{
-    0x12,                            // Descriptor size
+const USB_DEVICE_DESCRIPTOR g_UsbDeviceDescriptor = {
+    sizeof(USB_DEVICE_DESCRIPTOR),   // Descriptor size
     USB_DEVICE_DESCRIPTOR_TYPE,      // Device descriptor type
-    0x00, 0x02,                      // USB 2.0
+    0x0200,                          // USB 2.0
     0x00,                            // Device class (interface-class defined)
     0x00,                            // Device subclass
     0x00,                            // Device protocol
     0x40,                            // Maxpacket size for EP0
     UDEFX2_DEVICE_VENDOR_ID,         // Vendor ID
     UDEFX2_DEVICE_PROD_ID,           // Product ID
-    0x00,                            // LSB of firmware revision
-    0x01,                            // MSB of firmware revision
+    0x0100,                          // firmware revision
     g_ManufacturerIndex,             // Manufacture string index
     g_ProductIndex,                  // Product string index
     0x00,                            // Serial number string index
@@ -120,19 +118,12 @@ UsbValidateConstants(
     //
     NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bString[0] == AMERICAN_ENGLISH);
     //NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bString[1] == PRC_CHINESE);
-    NT_ASSERT(((PUSB_DEVICE_DESCRIPTOR)g_UsbDeviceDescriptor)->iManufacturer == g_ManufacturerIndex);
-    NT_ASSERT(((PUSB_DEVICE_DESCRIPTOR)g_UsbDeviceDescriptor)->iProduct == g_ProductIndex);
 
-    NT_ASSERT(((PUSB_DEVICE_DESCRIPTOR)g_UsbDeviceDescriptor)->bLength ==
-        sizeof(USB_DEVICE_DESCRIPTOR));
-    NT_ASSERT(sizeof(g_UsbDeviceDescriptor) == sizeof(USB_DEVICE_DESCRIPTOR));
     NT_ASSERT(((PUSB_CONFIGURATION_DESCRIPTOR)g_UsbConfigDescriptorSet)->wTotalLength ==
         sizeof(g_UsbConfigDescriptorSet));
     NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bLength ==
         sizeof(g_LanguageDescriptor));
 
-    NT_ASSERT(((PUSB_DEVICE_DESCRIPTOR)g_UsbDeviceDescriptor)->bDescriptorType ==
-        USB_DEVICE_DESCRIPTOR_TYPE);
     NT_ASSERT(((PUSB_CONFIGURATION_DESCRIPTOR)g_UsbConfigDescriptorSet)->bDescriptorType ==
         USB_CONFIGURATION_DESCRIPTOR_TYPE);
     NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bDescriptorType ==
@@ -198,7 +189,7 @@ Usb_Initialize(
     // Device descriptor
     //
     status = UdecxUsbDeviceInitAddDescriptor(controllerContext->ChildDeviceInit,
-        (PUCHAR)g_UsbDeviceDescriptor,
+        (PUCHAR)&g_UsbDeviceDescriptor,
         sizeof(g_UsbDeviceDescriptor));
 
     if (!NT_SUCCESS(status)) {
