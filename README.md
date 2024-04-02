@@ -24,8 +24,8 @@ Steps to install the drivers:
 * Copy the sys/inf/cat files to the same folder as installem.bat. Then run `installem.bat` from an Administrator command prompt to install the drivers and create a virtual UDEFX2 device.
 
 To watch the driver behavior, you can use these scripts:
-* <B>tr_on.bat</B> :  turns trace on
-* <B>tr_off.bat</B>: dumps trace and stops
+* `tr_on.bat`:  turns trace on
+* `tr_off.bat`: dumps trace and stops
 
 It is especially instructional to watch the traces during install/uninstall of the drivers, or when the test application works (see below).
 
@@ -33,15 +33,15 @@ It is especially instructional to watch the traces during install/uninstall of t
 Once the drivers are installed, you can test them with the test app, which is also stolen from the WDK sample and modified.  It can be used a few ways:
 
 *FULL BLOWN TEST*
-* *hostudetest.exe -a*   (goes into a loop waiting for commands over USB. Those can be sent from a separate instance, with the -c flag)
-* *hostudetest.exe -c somemission*   
+* `hostudetest.exe -a` (goes into a loop waiting for commands over USB. Those can be sent from a separate instance, with the -c flag)
+* `hostudetest.exe -c somemission`
 1) sends "somemission" over BULK/OUT
 2)  waits for an interrupt on INTERRUPT/IN
 3) finally  then reads USB/IN for response to the mission
 
 *INTERRUPT ONLY TEST*
-* *hostudetest.exe -i abc* (generates an INTERRUPT/IN transfer with a 4-byte little-endian payload matching the hexadecimal parameter provided)
-* *hostudetest.exe -p*  (waits for an interrupt, which can be generated in a separate instance of the test app, with the -i command - see INTERRUPT/IN endpoint description above)
+* `hostudetest.exe -i abc` (generates an INTERRUPT/IN transfer with a 4-byte little-endian payload matching the hexadecimal parameter provided)
+* `hostudetest.exe -p` (waits for an interrupt, which can be generated in a separate instance of the test app, with the -i command - see INTERRUPT/IN endpoint description above)
 
 
 
