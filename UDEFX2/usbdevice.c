@@ -459,7 +459,6 @@ UsbCreateEndpointObj(
     _Out_  UDECXUSBENDPOINT *pNewEpObjAddr
 )
 {
-    PUSB_CONTEXT pUsbContext = GetUsbDeviceContext(WdfUsbChildDevice);
     PUDECXUSBENDPOINT_INIT endpointInit = NULL;
 
     WDFQUEUE epQueue;
