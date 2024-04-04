@@ -572,7 +572,8 @@ ControllerEvtUdecxWdfDeviceQueryUsbCapability(
 	UNREFERENCED_PARAMETER(CapabilityType);
 	UNREFERENCED_PARAMETER(OutputBufferLength);
 	UNREFERENCED_PARAMETER(OutputBuffer);
-	UNREFERENCED_PARAMETER(ResultLength);
+
+	(*ResultLength) = 0;
 
 	if (RtlCompareMemory(
 		CapabilityType,
