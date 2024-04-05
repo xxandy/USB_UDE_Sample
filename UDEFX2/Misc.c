@@ -174,7 +174,7 @@ NTSTATUS
 WRQueuePullRead(
     _In_  PWRITE_BUFFER_TO_READ_REQUEST_QUEUE pQ,
     _In_  WDFREQUEST rqRead,
-    _Out_ PVOID rbuffer,
+    _Out_writes_bytes_to_opt_(rlen, *completedBytes) PVOID rbuffer,
     _In_  SIZE_T rlen,
     _Out_ PBOOLEAN pbReadyToComplete,
     _Out_ PSIZE_T completedBytes
