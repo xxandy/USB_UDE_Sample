@@ -14,34 +14,33 @@ UDEFX2.sys defines these endpoints:
 * <B>a BULK/OUT endpoint</B>: traces incoming data for confirmation.
 * <B>an INTERRUPT/IN endpoint</B>:  Upon request from a back-channel controller test app (via a back-channel IOCTL), generates an interrupt from the virtual device. Interrupt also generates Remote Wakeup if the virtual device is in low-power mode.
 
-To build the drivers, you need:
-* Visual Studio 2017
+## Build prerequisites
+* Visual Studio 2017 or newer
 * The WDK, along with the WDK extension for Visual Studio
 
+## Driver installation
 Steps to install the drivers:
 * Disable Secure Boot in UEFI/BIOS.
 * Run [`bcdedit /set testsigning on`](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/the-testsigning-boot-configuration-option) from an Administrator command prompt to enable loading of test-signed drivers.
 * Copy the sys/inf/cat files to the same folder as installem.bat. Then run `installem.bat` from an Administrator command prompt to install the drivers and create a virtual UDEFX2 device.
 
+## Driver testing
 To watch the driver behavior, you can use these scripts:
-* <B>tr_on.bat</B> :  turns trace on
-* <B>tr_off.bat</B>: dumps trace and stops
+* `tr_on.bat`:  turns trace on
+* `tr_off.bat`: dumps trace and stops
 
 It is especially instructional to watch the traces during install/uninstall of the drivers, or when the test application works (see below).
 
 
 Once the drivers are installed, you can test them with the test app, which is also stolen from the WDK sample and modified.  It can be used a few ways:
 
-*FULL BLOWN TEST*
-* *hostudetest.exe -a*   (goes into a loop waiting for commands over USB. Those can be sent from a separate instance, with the -c flag)
-* *hostudetest.exe -c somemission*   
+### Full-blown test
+* `hostudetest.exe -a` (goes into a loop waiting for commands over USB. Those can be sent from a separate instance, with the -c flag)
+* `hostudetest.exe -c somemission`
 1) sends "somemission" over BULK/OUT
 2)  waits for an interrupt on INTERRUPT/IN
 3) finally  then reads USB/IN for response to the mission
 
-*INTERRUPT ONLY TEST*
-* *hostudetest.exe -i abc* (generates an INTERRUPT/IN transfer with a 4-byte little-endian payload matching the hexadecimal parameter provided)
-* *hostudetest.exe -p*  (waits for an interrupt, which can be generated in a separate instance of the test app, with the -i command - see INTERRUPT/IN endpoint description above)
-
-
-
+### Interrupt-only test
+* `hostudetest.exe -i abc` (generates an INTERRUPT/IN transfer with a 4-byte little-endian payload matching the hexadecimal parameter provided)
+* `hostudetest.exe -p` (waits for an interrupt, which can be generated in a separate instance of the test app, with the -i command - see INTERRUPT/IN endpoint description above)
