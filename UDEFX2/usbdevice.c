@@ -50,8 +50,8 @@ const UCHAR g_UsbDeviceDescriptor[18] =
     UDEFX2_DEVICE_PROD_ID,           // Product ID
     0x00,                            // LSB of firmware revision
     0x01,                            // MSB of firmware revision
-    0x01,                            // Manufacture string index
-    0x02,                            // Product string index
+    g_ManufacturerIndex,             // Manufacture string index
+    g_ProductIndex,                  // Product string index
     0x00,                            // Serial number string index
     0x01                             // Number of configurations
 };
