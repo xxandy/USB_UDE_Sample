@@ -25,9 +25,6 @@ Environment:
 
 #include "ioctl.tmh"
 
-#pragma alloc_text(PAGE, OsrFxEvtIoDeviceControl)
-#pragma alloc_text(PAGE, ResetPipe)
-#pragma alloc_text(PAGE, ResetDevice)
 
 VOID
 OsrFxEvtIoDeviceControl(
@@ -77,8 +74,6 @@ Return Value:
     // at IRQL = PASSIVE_LEVEL.
     //
     _IRQL_limited_to_(PASSIVE_LEVEL);
-
-    PAGED_CODE();
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTL, "--> OsrFxEvtIoDeviceControl\n");
     //
@@ -226,8 +221,6 @@ Return Value:
 {
     NTSTATUS          status;
 
-    PAGED_CODE();
-
     //
     //  This routine synchronously submits a URB_FUNCTION_RESET_PIPE
     // request down the stack.
@@ -310,8 +303,6 @@ Return Value:
 {
     PDEVICE_CONTEXT pDeviceContext;
     NTSTATUS status;
-
-    PAGED_CODE();
 
     TraceEvents(TRACE_LEVEL_INFORMATION, DBG_IOCTL, "--> ResetDevice\n");
 

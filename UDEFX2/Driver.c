@@ -18,12 +18,6 @@ Environment:
 #include "driver.tmh"
 
 
-#ifdef ALLOC_PRAGMA
-#pragma alloc_text (INIT, DriverEntry)
-#pragma alloc_text (PAGE, UDEFX2EvtDeviceAdd)
-#pragma alloc_text (PAGE, UDEFX2EvtDriverContextCleanup)
-#endif
-
 NTSTATUS
 DriverEntry(
     _In_ PDRIVER_OBJECT  DriverObject,
@@ -124,8 +118,6 @@ Return Value:
 
     UNREFERENCED_PARAMETER(Driver);
 
-    PAGED_CODE();
-
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
 
     status = UDEFX2CreateDevice(DeviceInit);
@@ -155,8 +147,6 @@ Return Value:
 --*/
 {
     UNREFERENCED_PARAMETER(DriverObject);
-
-    PAGED_CODE();
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
 

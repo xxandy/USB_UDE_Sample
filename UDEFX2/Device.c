@@ -23,10 +23,6 @@ Environment:
 #include <ntstrsafe.h>
 #include "device.tmh"
 
-#ifdef ALLOC_PRAGMA
-#pragma alloc_text (PAGE, UDEFX2CreateDevice)
-#endif
-
 NTSTATUS
 UDEFX2CreateDevice(
     _Inout_ PWDFDEVICE_INIT WdfDeviceInit
