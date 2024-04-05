@@ -45,13 +45,9 @@ Return Value:
 
 --*/
 {
-	NTSTATUS                            status;
 	WDFDEVICE                           wdfDevice;
-	WDF_PNPPOWER_EVENT_CALLBACKS        wdfPnpPowerCallbacks;
 	WDF_OBJECT_ATTRIBUTES               wdfDeviceAttributes;
-	WDF_OBJECT_ATTRIBUTES               wdfRequestAttributes;
 	UDECX_WDF_DEVICE_CONFIG             controllerConfig;
-	WDF_FILEOBJECT_CONFIG               fileConfig;
     PUDECX_USBCONTROLLER_CONTEXT        pControllerContext;
 	WDF_IO_QUEUE_CONFIG                 defaultQueueConfig;
 	WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS
@@ -60,6 +56,7 @@ Return Value:
 
 	FuncEntry(TRACE_DEVICE);
 
+	WDF_PNPPOWER_EVENT_CALLBACKS wdfPnpPowerCallbacks;
 	WDF_PNPPOWER_EVENT_CALLBACKS_INIT(&wdfPnpPowerCallbacks);
 	wdfPnpPowerCallbacks.EvtDevicePrepareHardware = ControllerWdfEvtDevicePrepareHardware;
 	wdfPnpPowerCallbacks.EvtDeviceReleaseHardware = ControllerWdfEvtDeviceReleaseHardware;
@@ -72,6 +69,7 @@ Return Value:
 
 	WdfDeviceInitSetPnpPowerEventCallbacks(WdfDeviceInit, &wdfPnpPowerCallbacks);
 
+	WDF_OBJECT_ATTRIBUTES wdfRequestAttributes;
 	WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&wdfRequestAttributes, REQUEST_CONTEXT);
 	WdfDeviceInitSetRequestAttributes(WdfDeviceInit, &wdfRequestAttributes);
 
@@ -80,6 +78,7 @@ Return Value:
 	// interface reference strings. This requires calling WdfDeviceInitSetFileObjectConfig
 	// with FileObjectClass WdfFileObjectWdfXxx.
 	//
+	WDF_FILEOBJECT_CONFIG fileConfig;
 	WDF_FILEOBJECT_CONFIG_INIT(&fileConfig,
 		WDF_NO_EVENT_CALLBACK,
 		WDF_NO_EVENT_CALLBACK,
@@ -99,7 +98,7 @@ Return Value:
 	//
 	// Set the security descriptor for the device.
 	//
-	status = WdfDeviceInitAssignSDDLString(WdfDeviceInit, &SDDL_DEVOBJ_SYS_ALL_ADM_RWX_WORLD_RW_RES_R);
+	NTSTATUS status = WdfDeviceInitAssignSDDLString(WdfDeviceInit, &SDDL_DEVOBJ_SYS_ALL_ADM_RWX_WORLD_RW_RES_R);
 
 	if (!NT_SUCCESS(status)) {
 
@@ -285,7 +284,6 @@ NTSTATUS
 {
 	NTSTATUS status;
 	UINT32 instanceNumber;
-	BOOLEAN isCreated;
 
 	DECLARE_UNICODE_STRING_SIZE(uniDeviceName, DeviceNameSize);
 	DECLARE_UNICODE_STRING_SIZE(uniSymLinkName, SymLinkNameSize);
@@ -297,7 +295,7 @@ NTSTATUS
 	// Generate a unique static device name in order to provide compatibility to look like with
 	// existing USB host controller driver implementations.
 	//
-	isCreated = FALSE;
+	BOOLEAN isCreated = FALSE;
 
 	for (instanceNumber = 0; instanceNumber < MAXUINT32; instanceNumber++) {
 
@@ -412,10 +410,9 @@ ControllerWdfEvtDeviceD0Entry(
 )
 {
 	NTSTATUS status = STATUS_SUCCESS;
-    PUDECX_USBCONTROLLER_CONTEXT pControllerContext;
 
 	FuncEntry(TRACE_DEVICE);
-	pControllerContext = GetUsbControllerContext(WdfDevice);
+	PUDECX_USBCONTROLLER_CONTEXT pControllerContext = GetUsbControllerContext(WdfDevice);
 
 	if (PreviousState == WdfPowerDeviceD3Final) {
 
@@ -528,15 +525,13 @@ ControllerEvtIoDeviceControl(
 	_In_ ULONG IoControlCode
 )
 {
-	BOOLEAN handled;
-    NTSTATUS status = STATUS_SUCCESS;
     WDFDEVICE ctrdevice = WdfIoQueueGetDevice(Queue);
 
     
     UNREFERENCED_PARAMETER(OutputBufferLength);
 	UNREFERENCED_PARAMETER(InputBufferLength);
 
-	handled = UdecxWdfDeviceTryHandleUserIoctl(ctrdevice,
+	BOOLEAN handled = UdecxWdfDeviceTryHandleUserIoctl(ctrdevice,
 		Request);
 
 	if (handled) {
@@ -551,7 +546,7 @@ ControllerEvtIoDeviceControl(
     }
 
 
-	status = STATUS_INVALID_DEVICE_REQUEST;
+	NTSTATUS status = STATUS_INVALID_DEVICE_REQUEST;
 	LogError(TRACE_DEVICE, "Unexpected I/O control code 0x%x %!STATUS!", IoControlCode, status);
 	NT_ASSERTMSG("Unexpected I/O", FALSE);
 	WdfRequestComplete(Request, status);
