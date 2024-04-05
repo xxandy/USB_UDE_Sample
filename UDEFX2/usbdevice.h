@@ -38,14 +38,6 @@ typedef struct _USB_CONTEXT {
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(USB_CONTEXT, GetUsbDeviceContext);
 
 
-
-
-
-
-
-
-
-
 // ----- descriptor constants/strings/indexes
 #define g_ManufacturerIndex   1
 #define g_ProductIndex        2
@@ -57,14 +49,7 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(USB_CONTEXT, GetUsbDeviceContext);
 #define UDEFX2_DEVICE_VENDOR_ID  0x1209
 #define UDEFX2_DEVICE_PROD_ID    0x0887
 
-extern const UCHAR g_UsbConfigDescriptorSet[];
-
 // ------------------------------------------------
-
-
-
-
-
 
 
 EXTERN_C_START
