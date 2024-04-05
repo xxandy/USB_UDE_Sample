@@ -19,9 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="BackChannel.c" />
     <ClCompile Include="Device.c" />
     <ClCompile Include="Driver.c" />
