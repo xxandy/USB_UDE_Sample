@@ -57,7 +57,7 @@ const USB_DEVICE_DESCRIPTOR g_UsbDeviceDescriptor = {
 const UCHAR g_UsbConfigDescriptorSet[] =
 {
     // Configuration Descriptor Type
-    0x9,                              // Descriptor Size
+    sizeof(USB_CONFIGURATION_DESCRIPTOR),// Descriptor Size
     USB_CONFIGURATION_DESCRIPTOR_TYPE, // Configuration Descriptor Type
     0x27, 0x00,                        // Length of this descriptor and all sub descriptors
     0x1,                               // Number of interfaces
@@ -67,8 +67,8 @@ const UCHAR g_UsbConfigDescriptorSet[] =
     0x32,                              // Max power consumption of device (in 2mA unit) : 0 ma
 
         // Interface  descriptor
-        0x9,                                      // Descriptor size
-        USB_INTERFACE_DESCRIPTOR_TYPE,             // Interface Association Descriptor Type
+        sizeof(USB_INTERFACE_DESCRIPTOR),         // Descriptor size
+        USB_INTERFACE_DESCRIPTOR_TYPE,            // Interface Association Descriptor Type
         0,                                        // bInterfaceNumber
         0,                                        // bAlternateSetting
         3,                                        // bNumEndpoints
@@ -78,7 +78,7 @@ const UCHAR g_UsbConfigDescriptorSet[] =
         0x00,                                     // iInterface
 
         // Bulk Out Endpoint descriptor
-        0x07,                           // Descriptor size
+        sizeof(USB_ENDPOINT_DESCRIPTOR),// Descriptor size
         USB_ENDPOINT_DESCRIPTOR_TYPE,   // bDescriptorType
         g_BulkOutEndpointAddress,       // bEndpointAddress
         USB_ENDPOINT_TYPE_BULK,         // bmAttributes - bulk
@@ -86,7 +86,7 @@ const UCHAR g_UsbConfigDescriptorSet[] =
         0x00,                           // bInterval
 
         // Bulk IN endpoint descriptor
-        0x07,                           // Descriptor size 
+        sizeof(USB_ENDPOINT_DESCRIPTOR),// Descriptor size 
         USB_ENDPOINT_DESCRIPTOR_TYPE,   // Descriptor type
         g_BulkInEndpointAddress,        // Endpoint address and description
         USB_ENDPOINT_TYPE_BULK,         // bmAttributes - bulk
@@ -94,7 +94,7 @@ const UCHAR g_UsbConfigDescriptorSet[] =
         0x00,                           // Servicing interval for data transfers : NA for bulk
 
         // Interrupt IN endpoint descriptor
-        0x07,                           // Descriptor size 
+        sizeof(USB_ENDPOINT_DESCRIPTOR),// Descriptor size 
         USB_ENDPOINT_DESCRIPTOR_TYPE,   // Descriptor type
         g_InterruptEndpointAddress,     // Endpoint address and description
         USB_ENDPOINT_TYPE_INTERRUPT,    // bmAttributes - interrupt
