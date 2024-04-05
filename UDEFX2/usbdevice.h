@@ -54,10 +54,9 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(USB_CONTEXT, GetUsbDeviceContext);
 #define g_InterruptEndpointAddress 0x86
 
 
-#define UDEFX2_DEVICE_VENDOR_ID  0x9, 0x12 // little endian
-#define UDEFX2_DEVICE_PROD_ID    0x87, 0x8 // little endian
+#define UDEFX2_DEVICE_VENDOR_ID  0x1209
+#define UDEFX2_DEVICE_PROD_ID    0x0887
 
-extern const UCHAR g_UsbDeviceDescriptor[];
 extern const UCHAR g_UsbConfigDescriptorSet[];
 
 // ------------------------------------------------
