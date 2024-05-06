@@ -164,7 +164,7 @@ BackChannelEvtWrite(
                 matchingRead, status);
         }
         else {
-            completeBytes = MINLEN(rlen, transferBufferLength);
+            completeBytes = min(rlen, transferBufferLength);
             memcpy(rbuffer, transferBuffer, completeBytes);
         }
 
