@@ -58,14 +58,8 @@ Return Value:
 
 	WDF_PNPPOWER_EVENT_CALLBACKS wdfPnpPowerCallbacks;
 	WDF_PNPPOWER_EVENT_CALLBACKS_INIT(&wdfPnpPowerCallbacks);
-	wdfPnpPowerCallbacks.EvtDevicePrepareHardware = ControllerWdfEvtDevicePrepareHardware;
-	wdfPnpPowerCallbacks.EvtDeviceReleaseHardware = ControllerWdfEvtDeviceReleaseHardware;
 	wdfPnpPowerCallbacks.EvtDeviceD0Entry = ControllerWdfEvtDeviceD0Entry;
 	wdfPnpPowerCallbacks.EvtDeviceD0Exit = ControllerWdfEvtDeviceD0Exit;
-	wdfPnpPowerCallbacks.EvtDeviceD0EntryPostInterruptsEnabled =
-		ControllerWdfEvtDeviceD0EntryPostInterruptsEnabled;
-	wdfPnpPowerCallbacks.EvtDeviceD0ExitPreInterruptsDisabled =
-		ControllerWdfEvtDeviceD0ExitPreInterruptsDisabled;
 
 	WdfDeviceInitSetPnpPowerEventCallbacks(WdfDeviceInit, &wdfPnpPowerCallbacks);
 
@@ -378,29 +372,6 @@ exit:
 }
 
 
-
-NTSTATUS
-ControllerWdfEvtDevicePrepareHardware(
-	_In_
-	WDFDEVICE       WdfDevice,
-	_In_
-	WDFCMRESLIST    WdfResourcesRaw,
-	_In_
-	WDFCMRESLIST    WdfResourcesTranslated
-)
-{
-	FuncEntry(TRACE_DEVICE);
-	UNREFERENCED_PARAMETER(WdfDevice);
-	UNREFERENCED_PARAMETER(WdfResourcesRaw);
-	UNREFERENCED_PARAMETER(WdfResourcesTranslated);
-	FuncExit(TRACE_DEVICE, 0);
-	return STATUS_SUCCESS;
-}
-
-
-
-
-
 NTSTATUS
 ControllerWdfEvtDeviceD0Entry(
 	_In_
@@ -434,38 +405,6 @@ exit:
 
 
 NTSTATUS
-ControllerWdfEvtDeviceD0EntryPostInterruptsEnabled(
-	_In_
-	WDFDEVICE              WdfDevice,
-	_In_
-	WDF_POWER_DEVICE_STATE PreviousState
-)
-{
-	FuncEntry(TRACE_DEVICE);
-	UNREFERENCED_PARAMETER(WdfDevice);
-	UNREFERENCED_PARAMETER(PreviousState);
-	FuncExit(TRACE_DEVICE, 0);
-	return STATUS_SUCCESS;
-}
-
-
-NTSTATUS
-ControllerWdfEvtDeviceD0ExitPreInterruptsDisabled(
-	_In_
-	WDFDEVICE              WdfDevice,
-	_In_
-	WDF_POWER_DEVICE_STATE TargetState
-)
-{
-	FuncEntry(TRACE_DEVICE);
-	UNREFERENCED_PARAMETER(WdfDevice);
-	UNREFERENCED_PARAMETER(TargetState);
-	FuncExit(TRACE_DEVICE, 0);
-	return STATUS_SUCCESS;
-}
-
-
-NTSTATUS
 ControllerWdfEvtDeviceD0Exit(
 	_In_ WDFDEVICE              WdfDevice,
 	_In_ WDF_POWER_DEVICE_STATE TargetState
@@ -478,23 +417,6 @@ ControllerWdfEvtDeviceD0Exit(
 		Usb_Disconnect(WdfDevice);
 	}
 
-	FuncExit(TRACE_DEVICE, 0);
-	return STATUS_SUCCESS;
-}
-
-
-
-NTSTATUS
-ControllerWdfEvtDeviceReleaseHardware(
-	_In_
-	WDFDEVICE       WdfDevice,
-	_In_
-	WDFCMRESLIST    WdfResourcesTranslated
-)
-{
-	FuncEntry(TRACE_DEVICE);
-	UNREFERENCED_PARAMETER(WdfDevice);
-	UNREFERENCED_PARAMETER(WdfResourcesTranslated);
 	FuncExit(TRACE_DEVICE, 0);
 	return STATUS_SUCCESS;
 }
