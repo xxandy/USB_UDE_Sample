@@ -54,52 +54,67 @@ const USB_DEVICE_DESCRIPTOR g_UsbDeviceDescriptor = {
     0x01                             // Number of configurations
 };
 
-const UCHAR g_UsbConfigDescriptorSet[] =
-{
-    // Configuration Descriptor Type
-    0x9,                              // Descriptor Size
-    USB_CONFIGURATION_DESCRIPTOR_TYPE, // Configuration Descriptor Type
-    0x27, 0x00,                        // Length of this descriptor and all sub descriptors
-    0x1,                               // Number of interfaces
-    0x01,                              // Configuration number
-    0x00,                              // Configuration string index
-    0xA0,                              // Config characteristics - bus powered
-    0x32,                              // Max power consumption of device (in 2mA unit) : 0 ma
+typedef struct _UsbDevDesc {
+    USB_CONFIGURATION_DESCRIPTOR cfg;
+    USB_INTERFACE_DESCRIPTOR     intf;
+    USB_ENDPOINT_DESCRIPTOR      ep1;
+    USB_ENDPOINT_DESCRIPTOR      ep2;
+    USB_ENDPOINT_DESCRIPTOR      ep3;
+} UsbDevDesc;
+static_assert(sizeof(UsbDevDesc) == sizeof(USB_CONFIGURATION_DESCRIPTOR) + sizeof(USB_INTERFACE_DESCRIPTOR) + 3*sizeof(USB_ENDPOINT_DESCRIPTOR)); // verify that struct is packed
 
+
+const UsbDevDesc g_UsbConfigDescriptorSet = {
+    {
+        // Configuration Descriptor Type
+        sizeof(USB_CONFIGURATION_DESCRIPTOR),// Descriptor Size
+        USB_CONFIGURATION_DESCRIPTOR_TYPE, // Configuration Descriptor Type
+        sizeof(UsbDevDesc),                // Length of this descriptor and all sub descriptors
+        0x1,                               // Number of interfaces
+        0x01,                              // Configuration number
+        0x00,                              // Configuration string index
+        0xA0,                              // Config characteristics - bus powered
+        0x32,                              // Max power consumption of device (in 2mA unit) : 0 ma
+    },
+    {
         // Interface  descriptor
-        0x9,                                      // Descriptor size
-        USB_INTERFACE_DESCRIPTOR_TYPE,             // Interface Association Descriptor Type
-        0,                                        // bInterfaceNumber
-        0,                                        // bAlternateSetting
-        3,                                        // bNumEndpoints
-        0xFF,                                     // bInterfaceClass
-        0x00,                                     // bInterfaceSubClass
-        0x00,                                     // bInterfaceProtocol
-        0x00,                                     // iInterface
-
+        sizeof(USB_INTERFACE_DESCRIPTOR),  // Descriptor size
+        USB_INTERFACE_DESCRIPTOR_TYPE,     // Interface Association Descriptor Type
+        0,                                 // bInterfaceNumber
+        0,                                 // bAlternateSetting
+        3,                                 // bNumEndpoints
+        0xFF,                              // bInterfaceClass
+        0x00,                              // bInterfaceSubClass
+        0x00,                              // bInterfaceProtocol
+        0x00,                              // iInterface
+    },
+    {
         // Bulk Out Endpoint descriptor
-        0x07,                           // Descriptor size
+        sizeof(USB_ENDPOINT_DESCRIPTOR),// Descriptor size
         USB_ENDPOINT_DESCRIPTOR_TYPE,   // bDescriptorType
         g_BulkOutEndpointAddress,       // bEndpointAddress
         USB_ENDPOINT_TYPE_BULK,         // bmAttributes - bulk
-        0x00, 0x2,                      // wMaxPacketSize
+        0x0200,                         // wMaxPacketSize
         0x00,                           // bInterval
-
+    },
+    {
         // Bulk IN endpoint descriptor
-        0x07,                           // Descriptor size 
+        sizeof(USB_ENDPOINT_DESCRIPTOR),// Descriptor size 
         USB_ENDPOINT_DESCRIPTOR_TYPE,   // Descriptor type
         g_BulkInEndpointAddress,        // Endpoint address and description
         USB_ENDPOINT_TYPE_BULK,         // bmAttributes - bulk
-        0x00, 0x02,                     // Max packet size
+        0x0200,                         // Max packet size
         0x00,                           // Servicing interval for data transfers : NA for bulk
-
+    },
+    {
         // Interrupt IN endpoint descriptor
-        0x07,                           // Descriptor size 
+        sizeof(USB_ENDPOINT_DESCRIPTOR),// Descriptor size 
         USB_ENDPOINT_DESCRIPTOR_TYPE,   // Descriptor type
         g_InterruptEndpointAddress,     // Endpoint address and description
         USB_ENDPOINT_TYPE_INTERRUPT,    // bmAttributes - interrupt
-        0x40, 0x0,                      // Max packet size = 64
+        0x0040,                         // Max packet size = 64
         0x01                            // Servicing interval for interrupt (1ms/1 frame)
+    }
 };
 
 
@@ -119,13 +134,9 @@ UsbValidateConstants(
     NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bString[0] == AMERICAN_ENGLISH);
     //NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bString[1] == PRC_CHINESE);
 
-    NT_ASSERT(((PUSB_CONFIGURATION_DESCRIPTOR)g_UsbConfigDescriptorSet)->wTotalLength ==
-        sizeof(g_UsbConfigDescriptorSet));
     NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bLength ==
         sizeof(g_LanguageDescriptor));
 
-    NT_ASSERT(((PUSB_CONFIGURATION_DESCRIPTOR)g_UsbConfigDescriptorSet)->bDescriptorType ==
-        USB_CONFIGURATION_DESCRIPTOR_TYPE);
     NT_ASSERT(((PUSB_STRING_DESCRIPTOR)g_LanguageDescriptor)->bDescriptorType ==
         USB_STRING_DESCRIPTOR_TYPE);
 }
@@ -266,7 +277,7 @@ Usb_ReadDescriptorsAndPlugIn(
     }
 
     RtlCopyMemory(pComputedConfigDescSet,
-        g_UsbConfigDescriptorSet,
+        &g_UsbConfigDescriptorSet,
         sizeof(g_UsbConfigDescriptorSet));
 
     status = UdecxUsbDeviceInitAddDescriptor(controllerContext->ChildDeviceInit,
