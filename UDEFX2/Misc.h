@@ -17,10 +17,6 @@ Abstract:
 #include "trace.h"
 
 
-
-#define MINLEN(__a, __b)  ( ((__a) < (__b)) ? (__a) : (__b) )
-
-
 EXTERN_C_START
 
 

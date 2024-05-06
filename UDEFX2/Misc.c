@@ -217,7 +217,7 @@ WRQueuePullRead(
         size_t minlen;
         PBUFFER_CONTENT pWriteEntry = CONTAINING_RECORD(firstPendingWrite, BUFFER_CONTENT, BufferLink);
 
-        minlen = MINLEN(pWriteEntry->BufferLength, rlen);
+        minlen = min(pWriteEntry->BufferLength, rlen);
         memcpy(rbuffer, &(pWriteEntry->BufferStart), minlen);
 
         (*pbReadyToComplete) = TRUE;
