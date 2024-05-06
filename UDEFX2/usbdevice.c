@@ -169,8 +169,7 @@ Usb_Initialize(
 
     callbacks.EvtUsbDeviceLinkPowerEntry = UsbDevice_EvtUsbDeviceLinkPowerEntry;
     callbacks.EvtUsbDeviceLinkPowerExit = UsbDevice_EvtUsbDeviceLinkPowerExit;
-    callbacks.EvtUsbDeviceSetFunctionSuspendAndWake = UsbDevice_EvtUsbDeviceSetFunctionSuspendAndWake;
-
+    
     UdecxUsbDeviceInitSetStateChangeCallbacks(controllerContext->ChildDeviceInit, &callbacks);
 
     //
@@ -556,24 +555,5 @@ UsbDevice_EvtUsbDeviceLinkPowerExit(
     Io_DeviceSlept(UdecxUsbDevice);
 
     LogInfo(TRACE_DEVICE, "USB Device power EXIT [wdfDev=%p, usbDev=%p], WakeSetting=%x", UdecxWdfDevice, UdecxUsbDevice, WakeSetting);
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
-UsbDevice_EvtUsbDeviceSetFunctionSuspendAndWake(
-    _In_ WDFDEVICE                        UdecxWdfDevice,
-    _In_ UDECXUSBDEVICE                   UdecxUsbDevice,
-    _In_ ULONG                            Interface,
-    _In_ UDECX_USB_DEVICE_FUNCTION_POWER  FunctionPower
-)
-{
-    UNREFERENCED_PARAMETER(UdecxWdfDevice);
-    UNREFERENCED_PARAMETER(UdecxUsbDevice);
-    UNREFERENCED_PARAMETER(Interface);
-    UNREFERENCED_PARAMETER(FunctionPower);
-
-    // this never gets printed!
-    LogInfo(TRACE_DEVICE, "USB Device SuspendAwakeState=%x", FunctionPower );
-
     return STATUS_SUCCESS;
 }
