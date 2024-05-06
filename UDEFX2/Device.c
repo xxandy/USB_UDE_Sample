@@ -70,7 +70,7 @@ Return Value:
 	WdfDeviceInitSetPnpPowerEventCallbacks(WdfDeviceInit, &wdfPnpPowerCallbacks);
 
 	WDF_OBJECT_ATTRIBUTES wdfRequestAttributes;
-	WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&wdfRequestAttributes, REQUEST_CONTEXT);
+	WDF_OBJECT_ATTRIBUTES_INIT(&wdfRequestAttributes);
 	WdfDeviceInitSetRequestAttributes(WdfDeviceInit, &wdfRequestAttributes);
 
 	//

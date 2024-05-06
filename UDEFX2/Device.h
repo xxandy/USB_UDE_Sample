@@ -52,22 +52,6 @@ typedef struct _UDECX_USBCONTROLLER_CONTEXT {
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(UDECX_USBCONTROLLER_CONTEXT, GetUsbControllerContext);
 
 
-typedef struct _REQUEST_CONTEXT {
-	UINT32 unused;
-} REQUEST_CONTEXT, *PREQUEST_CONTEXT;
-
-WDF_DECLARE_CONTEXT_TYPE(REQUEST_CONTEXT);
-
-
-
-
-
-
-
-
-
-
-
 //
 // Function to initialize the device and its callbacks
 //
