@@ -426,21 +426,6 @@ Usb_Destroy(
     return;
 }
 
-VOID
-Usb_UdecxUsbEndpointEvtReset(
-    _In_ UCXCONTROLLER ctrl,
-    _In_ UCXENDPOINT ep,
-    _In_ WDFREQUEST r
-)
-{
-    UNREFERENCED_PARAMETER(ctrl);
-    UNREFERENCED_PARAMETER(ep);
-    UNREFERENCED_PARAMETER(r);
-
-    // TODO: endpoint reset. will require a different function prototype
-}
-
-
 
 NTSTATUS
 UsbCreateEndpointObj(
