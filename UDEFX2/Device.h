@@ -78,12 +78,8 @@ UDEFX2CreateDevice(
 
 
 
-EVT_WDF_DEVICE_PREPARE_HARDWARE                 ControllerWdfEvtDevicePrepareHardware;
-EVT_WDF_DEVICE_RELEASE_HARDWARE                 ControllerWdfEvtDeviceReleaseHardware;
 EVT_WDF_DEVICE_D0_ENTRY                         ControllerWdfEvtDeviceD0Entry;
 EVT_WDF_DEVICE_D0_EXIT                          ControllerWdfEvtDeviceD0Exit;
-EVT_WDF_DEVICE_D0_ENTRY_POST_INTERRUPTS_ENABLED ControllerWdfEvtDeviceD0EntryPostInterruptsEnabled;
-EVT_WDF_DEVICE_D0_EXIT_PRE_INTERRUPTS_DISABLED  ControllerWdfEvtDeviceD0ExitPreInterruptsDisabled;
 EVT_WDF_OBJECT_CONTEXT_CLEANUP                  ControllerWdfEvtCleanupCallback;
 EVT_WDF_IO_QUEUE_IO_DEVICE_CONTROL              ControllerEvtIoDeviceControl;
 
